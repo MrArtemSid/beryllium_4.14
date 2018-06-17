@@ -162,3 +162,14 @@ config SND_SOC_MSM8996
 	tristate "SND_SOC_MSM8996"
 config SND_SOC_MSM8998
 	tristate "SND_SOC_MSM8998"
+	
+config SND_SOC_TAS2557
+	tristate "SND_SOC_TAS2557"
+config SND_SOC_TAS2559
+	tristate "SND_SOC_TAS2559"
+config TAS2557_CODEC
+	tristate "TAS2557_CODEC"
+config TAS2557_MISC
+	tristate "TAS2557_MISC"
+config TAS2557_REGMAP
+	tristate "TAS2557_REGMAP"
