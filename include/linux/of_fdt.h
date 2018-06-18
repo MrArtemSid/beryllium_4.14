@@ -47,6 +47,8 @@ extern void *initial_boot_params;
 extern char __dtb_start[];
 extern char __dtb_end[];
 
+extern void early_init_dt_setup_pureason_arch(unsigned long pu_reason);
+
 /* Other Prototypes */
 extern int of_fdt_get_ddrtype(void);
 
