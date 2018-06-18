@@ -1177,6 +1177,14 @@ static int __cam_req_mgr_process_req(struct cam_req_mgr_core_link *link,
 		goto error;
 	}
 
+	if (link->sync_link && link->sync_link->sync_link == link) {
+		if (link->sync_link->sync_trigger_frame_id == 0 && link->sync_trigger_frame_id > 1) {
+			rc = 0;
+			CAM_DBG(CAM_CRM, "Waiting another sensor");
+			goto error;
+		}
+	}
+
 	if ((trigger != CAM_TRIGGER_POINT_SOF) &&
 		(trigger != CAM_TRIGGER_POINT_EOF))
 		goto error;
@@ -2298,6 +2306,7 @@ static int cam_req_mgr_process_trigger(void *priv, void *data)
 		}
 		__cam_req_mgr_inc_idx(&in_q->rd_idx, 1, in_q->num_slots);
 	}
+	link->sync_trigger_frame_id = trigger_data->frame_id;
 
 	rc = __cam_req_mgr_process_req(link, trigger_data);
 
@@ -2450,8 +2459,8 @@ static int cam_req_mgr_cb_notify_err(
 		rc = -EPERM;
 		goto end;
 	}
-	crm_timer_reset(link->watchdog);
 	spin_unlock_bh(&link->link_state_spin_lock);
+	crm_timer_reset(link->watchdog);
 
 	task = cam_req_mgr_workq_get_task(link->workq);
 	if (!task) {
@@ -2513,8 +2522,8 @@ static int cam_req_mgr_cb_notify_trigger(
 		rc = -EPERM;
 		goto end;
 	}
-	crm_timer_reset(link->watchdog);
 	spin_unlock_bh(&link->link_state_spin_lock);
+	crm_timer_reset(link->watchdog);
 
 	task = cam_req_mgr_workq_get_task(link->workq);
 	if (!task) {
@@ -3279,9 +3288,11 @@ int cam_req_mgr_sync_config(
 
 	link1->sync_link_sof_skip = false;
 	link1->sync_link = NULL;
+	link1->sync_trigger_frame_id = 0;
 
 	link2->sync_link_sof_skip = false;
 	link2->sync_link = NULL;
+	link2->sync_trigger_frame_id = 0;
 
 	link1->is_master = false;
 	link2->is_master = false;
@@ -3416,7 +3427,7 @@ int cam_req_mgr_link_control(struct cam_req_mgr_link_control *control)
 		link = (struct cam_req_mgr_core_link *)
 			cam_get_device_priv(control->link_hdls[i]);
 		if (!link) {
-			CAM_ERR(CAM_CRM, "Link(%d) is NULL on session 0x%x",
+			CAM_ERR_RATE_LIMIT(CAM_CRM, "Link(%d) is NULL on session 0x%x",
 				i, control->session_hdl);
 			rc = -EINVAL;
 			break;

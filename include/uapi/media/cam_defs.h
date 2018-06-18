@@ -26,6 +26,11 @@
 #define CAM_EXT_OPCODE_BASE                     0x200
 #define CAM_CONFIG_DEV_EXTERNAL                 (CAM_EXT_OPCODE_BASE + 0x1)
 
+/* camera ir op codes*/
+#define CAM_IR_UPDATE                           (CAM_EXT_OPCODE_BASE + 0x2)
+#define CAM_IR_GET_POWER_STATE                  (CAM_EXT_OPCODE_BASE + 0x3)
+#define CAM_IR_LUMA_READ                        (CAM_EXT_OPCODE_BASE + 0x4)
+
 /* camera handle type */
 #define CAM_HANDLE_USER_POINTER                 1
 #define CAM_HANDLE_MEM_HANDLE                   2
@@ -649,6 +654,11 @@ struct cam_dump_req_cmd {
 	uint32_t       buf_handle;
 	int32_t        offset;
 	uint32_t       reserved;
+};
+
+struct cam_luma_data {
+	uint32_t        expo;
+	uint32_t        gain;
 };
 
 
