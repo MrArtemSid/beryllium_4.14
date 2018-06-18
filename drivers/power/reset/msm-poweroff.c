@@ -338,18 +338,9 @@ static void msm_restart_prepare(const char *cmd)
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
-#if defined(TARGET_SOMC_XBOOT)
 	if (in_panic) {
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-		__raw_writel(0xC0DEDEAD, restart_reason);
-		qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
-		flush_cache_all();
-
-		return;
-	}
-#endif
-
-	if (cmd != NULL) {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_PANIC);
+	} else if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
@@ -395,26 +386,15 @@ static void msm_restart_prepare(const char *cmd)
 				__raw_writel(0x6f656d00 | (code & 0xff),
 					     restart_reason);
 		} else if (!strncmp(cmd, "edl", 3)) {
+			if (0)
 			enable_emergency_dload_mode();
 		} else {
-#if defined(TARGET_SOMC_XBOOT) || defined(TARGET_SOMC_S1BOOT)
-			qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
-#else
-			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
-#endif
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
 			__raw_writel(0x77665501, restart_reason);
 		}
 	} else {
-#if defined(TARGET_SOMC_XBOOT) || defined(TARGET_SOMC_S1BOOT)
-		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
 		__raw_writel(0x77665501, restart_reason);
-#elif defined(TARGET_SOMC_S1BOOT)
-		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
-		__raw_writel(0x776655AA, restart_reason);
-#else
- 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
-		__raw_writel(0x776655AA, restart_reason);
-#endif
 	}
 
 	flush_cache_all();
