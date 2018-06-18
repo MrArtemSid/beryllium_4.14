@@ -350,7 +350,9 @@ static void msm_restart_prepare(const char *cmd)
 	}
 #endif
 
-	if (cmd != NULL) {
+	if (in_panic) {
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_PANIC);
+	} else if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_BOOTLOADER);
@@ -396,12 +398,13 @@ static void msm_restart_prepare(const char *cmd)
 				__raw_writel(0x6f656d00 | (code & 0xff),
 					     restart_reason);
 		} else if (!strncmp(cmd, "edl", 3)) {
+			if (0)
 			enable_emergency_dload_mode();
 		} else {
 #if defined(TARGET_SOMC_XBOOT) || defined(TARGET_SOMC_S1BOOT)
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
 #else
-			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
 #endif
 			__raw_writel(0x77665501, restart_reason);
 		}
@@ -413,8 +416,8 @@ static void msm_restart_prepare(const char *cmd)
 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
 		__raw_writel(0x776655AA, restart_reason);
 #else
- 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
-		__raw_writel(0x776655AA, restart_reason);
+ 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
+		__raw_writel(0x77665501, restart_reason);
 #endif
 	}
 
