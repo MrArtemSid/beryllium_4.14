@@ -32,6 +32,7 @@
 #define CAM_FD_MAX_IO_BUFFERS        5
 #define CAM_FD_MAX_HW_ENTRIES        5
 #define CAM_FD_HW_DUMP_TAG_MAX_LEN   32
+#define CAM_FD_CTX_MAX               16
 
 /**
  * enum cam_fd_hw_type - Enum for FD HW type
