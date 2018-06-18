@@ -66,11 +66,22 @@ config SMB1355_SLAVE_CHARGER
 config QPNP_SMBCHARGER
 	tristate "QPNP SMB Charger driver"
 	depends on MFD_SPMI_PMIC
+        help
+          Say Y here to enable the dual path switch mode battery charger which
+          supports USB detection and battery charging up to 3A.
+          The driver also offers relevant information to userspace via the
+          power supply framework.
+
+config IDT_P9220
+	tristate "idtp9220 wireless Charger"
+	depends on I2C
 	help
-	  Say Y here to enable the dual path switch mode battery charger which
-	  supports USB detection and battery charging up to 3A.
-	  The driver also offers relevant information to userspace via the
-	  power supply framework.
+	  Say Y to include support for idtp9220 wireless Charger.
+	  idtp9220 is a wireless battery charger.
+	  The driver supports charger enable/disable.
+	  The driver reports the charger status via the power supply framework.
+	  The driver controls idtp9220 via I2C and
+	  supports device-tree interface.
 
 config QPNP_SMBCHARGER_EXTENSION
 	tristate "Charger driver extension"
