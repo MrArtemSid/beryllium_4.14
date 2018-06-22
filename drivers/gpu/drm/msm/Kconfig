@@ -191,4 +191,9 @@ config DRM_SDE_RSC
 	  avoids the display core power collapse. A client can also register
 	  for display core power collapse events on rsc.
 
+config DRM_SDE_XLOG_DEBUG
+	bool "Trigger a panic after the dumping work has completed when SDE error"
+	default n
+	depends on DRM_MSM
+
 source "drivers/gpu/drm/msm/dsi-staging/somc_panel/Kconfig"

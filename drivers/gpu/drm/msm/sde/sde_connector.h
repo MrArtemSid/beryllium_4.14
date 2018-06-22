@@ -444,6 +444,7 @@ struct sde_connector {
 
 	bool last_cmd_tx_sts;
 	bool hdr_capable;
+	bool panel_dead_skip;
 };
 
 /**
