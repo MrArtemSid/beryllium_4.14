@@ -2678,6 +2678,31 @@ int dsi_ctrl_update_host_state(struct dsi_ctrl *dsi_ctrl,
 }
 
 /**
+ * dsi_ctrl_update_host_init_state() - Update the host initialization state.
+ * @dsi_ctrl:        DSI controller handle.
+ * @enable:        boolean signifying host state.
+ *
+ * Update the host initialization status only while exiting from ulps during
+ * suspend state.
+ *
+ * Return: error code.
+ */
+int dsi_ctrl_update_host_init_state(struct dsi_ctrl *dsi_ctrl, bool enable)
+{
+	int rc = 0;
+	u32 state = enable ? 0x1 : 0x0;
+
+	rc = dsi_ctrl_check_state(dsi_ctrl, DSI_CTRL_OP_HOST_INIT, state);
+	if (rc) {
+		pr_err("[DSI_%d] Controller state check failed, rc=%d\n",
+		       dsi_ctrl->cell_index, rc);
+		return rc;
+	}
+	dsi_ctrl_update_state(dsi_ctrl, DSI_CTRL_OP_HOST_INIT, state);
+	return rc;
+}
+
+/**
  * dsi_ctrl_host_init() - Initialize DSI host hardware.
  * @dsi_ctrl:        DSI controller handle.
  * @is_splash_enabled:        boolean signifying splash status.

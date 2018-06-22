@@ -94,6 +94,17 @@ struct dma_buf_attachment;
 struct pci_dev;
 struct pci_controller;
 
+
+/**
+*AOD brightness, hight brightness level 60nit, low brightness level 5nit
+*/
+#define DOZE_MIN_BRIGHTNESS_LEVEL	5
+enum {
+	DOZE_BRIGHTNESS_INVALID = 0,
+	DOZE_BRIGHTNESS_HBM,
+	DOZE_BRIGHTNESS_LBM,
+};
+
 /*
  * The following categories are defined:
  *

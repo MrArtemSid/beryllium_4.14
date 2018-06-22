@@ -95,6 +95,9 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	if (!bl_lvl && brightness)
 		bl_lvl = 1;
 
+        if (bl_lvl && bl_lvl < display->panel->bl_config.bl_min_level)
+                bl_lvl = display->panel->bl_config.bl_min_level;
+
 	if (display->panel->bl_config.bl_update ==
 		BL_UPDATE_DELAY_UNTIL_FIRST_FRAME && !c_conn->allow_bl_update) {
 		c_conn->unset_bl_level = bl_lvl;
@@ -735,7 +738,7 @@ void sde_connector_helper_bridge_disable(struct drm_connector *connector)
 	sde_connector_schedule_status_work(connector, false);
 
 	c_conn = to_sde_connector(connector);
-	if (c_conn->bl_device) {
+	if (c_conn->panel_dead) {
 		c_conn->bl_device->props.power = FB_BLANK_POWERDOWN;
 		c_conn->bl_device->props.state |= BL_CORE_FBBLANK;
 		backlight_update_status(c_conn->bl_device);
@@ -767,13 +770,16 @@ void sde_connector_helper_bridge_enable(struct drm_connector *connector)
 				MSM_ENC_TX_COMPLETE);
 	c_conn->allow_bl_update = true;
 
-	if (c_conn->bl_device) {
+
+	/* Special handling for ESD recovery case */
+	if (c_conn->panel_dead) {
 		c_conn->bl_device->props.power = FB_BLANK_UNBLANK;
 		c_conn->bl_device->props.state &= ~BL_CORE_FBBLANK;
 		backlight_update_status(c_conn->bl_device);
+		c_conn->panel_dead = false;
 	}
-	c_conn->panel_dead = false;
 }
+
 
 int sde_connector_clk_ctrl(struct drm_connector *connector, bool enable)
 {
@@ -1189,6 +1195,10 @@ static int sde_connector_atomic_set_property(struct drm_connector *connector,
 	/* connector-specific property handling */
 	idx = msm_property_index(&c_conn->property_info, property);
 	switch (idx) {
+	case CONNECTOR_PROP_LP:
+		if (connector->dev)
+			connector->dev->doze_state = val;
+		break;
 	case CONNECTOR_PROP_OUT_FB:
 		/* clear old fb, if present */
 		if (c_state->out_fb)
@@ -2008,6 +2018,31 @@ static const struct drm_connector_helper_funcs sde_connector_helper_ops_v2 = {
 	.atomic_check = sde_connector_atomic_check,
 };
 
+static irqreturn_t esd_err_irq_handle(int irq, void *data)
+{
+	struct sde_connector *c_conn = data;
+	struct drm_event event;
+	struct dsi_display *dsi_display;
+
+	if (!c_conn && !c_conn->display) {
+		SDE_ERROR("not able to get connector object\n");
+		return IRQ_HANDLED;
+	}
+
+	dsi_display = (struct dsi_display *)(c_conn->display);
+	if (!dsi_display->panel->panel_initialized) {
+		pr_info("%s: Panel is not initialized, skip it!\n", __func__);
+		return IRQ_HANDLED;
+	}
+
+	SDE_ERROR("esd check irq report PANEL_DEAD conn_id: %d enc_id: %d\n",
+		c_conn->base.base.id, c_conn->encoder->base.id);
+
+	_sde_connector_report_panel_dead(conn, false);
+
+	return IRQ_HANDLED;
+}
+
 static int sde_connector_populate_mode_info(struct drm_connector *conn,
 	struct sde_kms_info *info)
 {
@@ -2321,6 +2356,21 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 				&dsi_display->panel->hdr_props,
 				sizeof(dsi_display->panel->hdr_props),
 				CONNECTOR_PROP_HDR_INFO);
+		}
+
+		/* register esd irq and enable it after panel enabled */
+		if (dsi_display && dsi_display->panel &&
+			dsi_display->panel->esd_config.esd_err_irq_gpio > 0) {
+			rc = request_threaded_irq(dsi_display->panel->esd_config.esd_err_irq,
+							NULL, esd_err_irq_handle,
+							dsi_display->panel->esd_config.esd_err_irq_flags,
+							"esd_err_irq", c_conn);
+			if (rc < 0) {
+				pr_err("%s: request irq %d failed\n", __func__, dsi_display->panel->esd_config.esd_err_irq);
+					dsi_display->panel->esd_config.esd_err_irq = 0;
+			} else {
+				pr_info("%s: Request esd irq succeed!\n", __func__);
+			}
 		}
 	}
 
