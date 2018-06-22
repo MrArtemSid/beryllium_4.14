@@ -84,6 +84,11 @@
 
 #define MAX_CC_STEPS			20
 
+#define VBAT_RESTART_FG_EMPTY_UV		3700000
+#define TEMP_THR_RESTART_FG		150
+#define RESTART_FG_START_WORK_MS		1000
+#define RESTART_FG_WORK_MS		2000
+
 #define FULL_CAPACITY			100
 #define FULL_SOC_RAW			255
 
@@ -210,6 +215,7 @@ enum fg_sram_param_id {
 	FG_SRAM_CHG_TERM_CURR,
 	FG_SRAM_CHG_TERM_BASE_CURR,
 	FG_SRAM_CUTOFF_CURR,
+	FG_SRAM_CUTOFF_CURR,
 	FG_SRAM_DELTA_MSOC_THR,
 	FG_SRAM_DELTA_BSOC_THR,
 	FG_SRAM_RECHARGE_SOC_THR,
@@ -325,6 +331,7 @@ struct fg_batt_props {
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	int		initial_capacity;
 #endif
+	int		nom_cap_uah;
 	int		*therm_coeffs;
 	int		therm_ctr_offset;
 	int		therm_pull_up_kohms;

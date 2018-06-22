@@ -20,6 +20,7 @@
 #include <linux/pmic-voter.h>
 #include "step-chg-jeita.h"
 
+#define MAX_STEP_CHG_ENTRIES	4
 #define STEP_CHG_VOTER		"STEP_CHG_VOTER"
 #define JEITA_VOTER		"JEITA_VOTER"
 
@@ -28,6 +29,12 @@
 			&& (value) >= (right)) \
 		|| ((left) <= (right) && (left) <= (value) \
 			&& (value) <= (right)))
+
+struct range_data {
+	int low_threshold;
+	int  high_threshold;
+	int value;
+};
 
 struct step_chg_cfg {
 	struct step_chg_jeita_param	param;
@@ -461,6 +468,14 @@ static int get_val(struct range_data *range, int hysteresis, int current_index,
 		*val = range[*new_index].value;
 	}
 
+	if (threshold < range[0].low_threshold) {
+		*new_index = 0;
+		*val = range[*new_index].value;
+	} else if (threshold > range[MAX_STEP_CHG_ENTRIES - 1].low_threshold) {
+		*new_index = MAX_STEP_CHG_ENTRIES - 1;
+		*val = range[*new_index].value;
+	}
+
 	/*
 	 * If we don't have a current_index return this
 	 * newfound value. There is no hysterisis from out of range
@@ -884,10 +899,10 @@ int qcom_step_chg_init(struct device *dev,
 
 	chip->jeita_fcc_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fcc_config->param.prop_name = "BATT_TEMP";
-	chip->jeita_fcc_config->param.hysteresis = 10;
+	chip->jeita_fcc_config->param.hysteresis = 5;
 	chip->jeita_fv_config->param.psy_prop = POWER_SUPPLY_PROP_TEMP;
 	chip->jeita_fv_config->param.prop_name = "BATT_TEMP";
-	chip->jeita_fv_config->param.hysteresis = 10;
+	chip->jeita_fv_config->param.hysteresis = 5;
 
 	INIT_DELAYED_WORK(&chip->status_change_work, status_change_work);
 	INIT_DELAYED_WORK(&chip->get_config_work, get_config_work);
