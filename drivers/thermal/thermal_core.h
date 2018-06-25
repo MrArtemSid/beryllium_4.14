@@ -64,6 +64,15 @@ struct thermal_instance {
 #define to_cooling_device(_dev)	\
 	container_of(_dev, struct thermal_cooling_device, device)
 
+struct thermal_message {
+	bool message_ok;
+	const char *batt_array_size;
+	const char *batt_level_screen_on;
+	const char *batt_level_screen_off;
+};
+
+extern struct thermal_message *tm;
+
 int thermal_register_governor(struct thermal_governor *);
 void thermal_unregister_governor(struct thermal_governor *);
 void thermal_zone_device_rebind_exception(struct thermal_zone_device *,
@@ -164,8 +173,13 @@ int of_thermal_aggregate_trip(struct thermal_zone_device *tz,
 			      enum thermal_trip_type type,
 			      int *low, int *high);
 void of_thermal_handle_trip(struct thermal_zone_device *tz);
+<<<<<<< HEAD
 void of_thermal_handle_trip_temp(struct thermal_zone_device *tz,
 					int trip_temp);
+=======
+int of_parse_thermal_message(void);
+void free_thermal_message(void);
+>>>>>>> 4685495544c8... drivers: thermal: Import Xiaomi changes
 #else
 static inline int of_parse_thermal_zones(void) { return 0; }
 static inline void of_thermal_destroy_zones(void) { }
