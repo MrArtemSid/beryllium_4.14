@@ -1,4 +1,26 @@
 # SPDX-License-Identifier: GPL-2.0
+ifeq ($(CONFIG_MACH_XIAOMI_SDM845),y)
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+	dtbo-$(CONFIG_MACH_XIAOMI_E10) += \
+		xiaomi/beryllium-p0-v2-overlay.dtbo \
+		xiaomi/beryllium-p0-v2.1-overlay.dtbo
+
+sdm845-mtp-overlay.dtbo-base := sdm845.dtb
+sdm845-v2-mtp-overlay.dtbo-base := sdm845-v2.dtb
+sdm845-v2.1-mtp-overlay.dtbo-base := sdm845-v2.1.dtb
+
+beryllium-p0-v2-overlay.dtbo-base := sdm845-v2.dtb
+beryllium-p0-v2.1-overlay.dtbo-base := sdm845-v2.1.dtb
+else
+
+dtb-$(CONFIG_MACH_XIAOMI_E10) += \
+	xiaomi/beryllium-p0-v2.dtb \
+	xiaomi/beryllium-p0-v2.1.dtb \
+	xiaomi/beryllium-p1-v2.1.dtb \
+	xiaomi/beryllium-p2-v2.1.dtb \
+	xiaomi/beryllium-mp-v2.1.dtb
+endif
+else
 ifeq ($(TARGET_BOARD_TYPE),auto)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SM8150) += \
@@ -584,6 +606,7 @@ dtb-$(CONFIG_ARCH_SDM429W) += sdm429-wtp.dtb\
 	sda429-bg-dvt2-wtp.dtb
 endif
 
+endif
 endif
 
 ifeq ($(CONFIG_ARM64),y)
