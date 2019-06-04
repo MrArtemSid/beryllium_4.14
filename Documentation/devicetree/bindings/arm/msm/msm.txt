@@ -41,6 +41,9 @@ SoCs:
 - MSM8996
   compatible = "qcom,msm8996"
 
+- SDM845
+  compatible = "qcom,sdm845"
+
 - SM8150
   compatible = "qcom,sm8150"
 
@@ -172,6 +175,18 @@ compatible = "qcom,msm8996-fluid"
 compatible = "qcom,msm8996-liquid"
 compatible = "qcom,msm8996-mtp"
 compatible = "qcom,msm8996-adp"
+compatible = "qcom,sdm845-sim"
+compatible = "qcom,sdm845-rumi"
+compatible = "qcom,sdm845-cdp"
+compatible = "qcom,sdm845-mtp"
+compatible = "qcom,sdm845-mtp"
+compatible = "qcom,sdm845-qrd"
+compatible = "qcom,sdm845-qvr"
+compatible = "qcom,sda845-cdp"
+compatible = "qcom,sda845-mtp"
+compatible = "qcom,sda845-qrd"
+compatible = "qcom,sda845-hdk"
+compatible = "qcom,sda845-svr"
 compatible = "qcom,sm8150-rumi"
 compatible = "qcom,sm8150-mtp"
 compatible = "qcom,sm8150-cdp"
