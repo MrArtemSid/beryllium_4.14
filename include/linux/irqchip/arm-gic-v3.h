@@ -599,6 +599,9 @@ static inline bool gic_enable_sre(void)
 
 void gic_show_pending_irqs(void);
 unsigned int get_gic_highpri_irq(void);
+void gic_v3_dist_save(void);
+void gic_v3_dist_restore(void);
+
 #endif
 
 #endif
