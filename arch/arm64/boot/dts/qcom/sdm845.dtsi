@@ -61,7 +61,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -98,7 +97,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_100>;
@@ -129,7 +127,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_200>;
@@ -160,7 +157,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			cache-size = <0x8000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_300>;
@@ -191,7 +187,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1740>;
 			cache-size = <0x20000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_400>;
@@ -222,7 +217,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1740>;
 			cache-size = <0x20000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_500>;
@@ -253,7 +247,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1740>;
 			cache-size = <0x20000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_600>;
@@ -284,7 +277,6 @@
 			enable-method = "psci";
 			capacity-dmips-mhz = <1740>;
 			cache-size = <0x20000>;
-			cpu-release-addr = <0x0 0x90000000>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_700>;
