@@ -319,6 +319,14 @@ config MSM_DISPCC_SM8150
 	  Say Y if you want to support display devices and functionality such as
 	  splash screen.
 
+config MSM_DEBUGCC_SDM845
+	tristate "SDM845 Debug Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the debug clock controller on Qualcomm Technologies, Inc
+	  SDM845 devices.
+	  Say Y if you want to support the clock measurement functionality.
+
 config MSM_DEBUGCC_SM8150
 	tristate "SM8150 Debug Clock Controller"
 	depends on COMMON_CLK_QCOM
