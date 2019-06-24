@@ -4035,7 +4035,7 @@ static int qpnp_labibb_check_ttw_supported(struct qpnp_labibb *labibb)
 	return rc;
 }
 
-static ssize_t qpnp_labibb_irq_control(struct class *c,
+static ssize_t secure_mode_store(struct class *c,
 				       struct class_attribute *attr,
 				       const char *buf, size_t count)
 {
@@ -4071,12 +4071,13 @@ static ssize_t qpnp_labibb_irq_control(struct class *c,
 
 	return count;
 }
+static CLASS_ATTR_WO(secure_mode);
 
-static struct class_attribute labibb_attributes[] = {
-	[0] = __ATTR(secure_mode, 0664, NULL,
-			 qpnp_labibb_irq_control),
-	 __ATTR_NULL,
+static struct attribute *labibb_class_attrs[] = {
+	&class_attr_secure_mode.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(labibb_class);
 
 static int qpnp_labibb_regulator_probe(struct platform_device *pdev)
 {
@@ -4273,7 +4274,7 @@ static int qpnp_labibb_regulator_probe(struct platform_device *pdev)
 
 	labibb->labibb_class.name = "lcd_bias";
 	labibb->labibb_class.owner = THIS_MODULE;
-	labibb->labibb_class.class_attrs = labibb_attributes;
+	labibb->labibb_class.class_groups = labibb_class_groups;
 
 	rc = class_register(&labibb->labibb_class);
 	if (rc < 0) {
