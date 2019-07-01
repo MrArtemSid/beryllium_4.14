@@ -1560,7 +1560,7 @@ static int smb1355_probe(struct platform_device *pdev)
 	mutex_init(&chip->write_lock);
 	mutex_init(&chip->suspend_lock);
 	INIT_DELAYED_WORK(&chip->die_temp_work, die_temp_work);
-	chip->disabled = false;
+	chip->disabled = true;
 	chip->die_temp_deciDegC = -EINVAL;
 
 	chip->regmap = dev_get_regmap(chip->dev->parent, NULL);
