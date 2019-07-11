@@ -46,7 +46,7 @@
 		};
 	};
 };
-
+/*
 &red_led {
 	linux,name = "white";
 	qcom,start-idx = <1>;
@@ -67,6 +67,7 @@
 &blue_led {
 	status = "disabled";
 };
+*/
 
 &soc {
 	restart@10ac000 {
