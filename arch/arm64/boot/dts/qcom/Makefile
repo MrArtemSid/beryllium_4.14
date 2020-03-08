@@ -34,6 +34,23 @@ sdm845-v2.1-tama-akatsuki_generic-overlay.dtbo-base := sdm845-v2.1.dtb
 sdm845-tama-apollo_generic-overlay.dtbo-base := sdm845.dtb
 sdm845-v2-tama-apollo_generic-overlay.dtbo-base := sdm845-v2.dtb
 sdm845-v2.1-tama-apollo_generic-overlay.dtbo-base := sdm845-v2.1.dtb
+ifeq ($(CONFIG_MACH_XIAOMI_SDM845),y)
+	dtbo-y += \
+		sdm845-mtp-overlay.dtbo \
+		sdm845-v2-mtp-overlay.dtbo \
+		sdm845-v2.1-mtp-overlay.dtbo
+
+	dtbo-$(CONFIG_MACH_XIAOMI_E10) += \
+		beryllium-p0-v2-overlay.dtbo \
+		beryllium-p0-v2.1-overlay.dtbo
+
+sdm845-mtp-overlay.dtbo-base := sdm845.dtb
+sdm845-v2-mtp-overlay.dtbo-base := sdm845-v2.dtb
+sdm845-v2.1-mtp-overlay.dtbo-base := sdm845-v2.1.dtb
+
+beryllium-p0-v2-overlay.dtbo-base := sdm845-v2.dtb
+beryllium-p0-v2.1-overlay.dtbo-base := sdm845-v2.1.dtb
+endif
 endif
 
 # SDM660 - SDE
