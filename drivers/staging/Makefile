@@ -51,4 +51,4 @@ obj-$(CONFIG_CRYPTO_DEV_CCREE)	+= ccree/
 obj-$(CONFIG_DRM_VBOXVIDEO)	+= vboxvideo/
 obj-$(CONFIG_PI433)		+= pi433/
 obj-$(CONFIG_EXFAT_FS)		+= exfat/
-obj-y				+= wlan-qc/
+obj-y				+= qcacld-3.0/
