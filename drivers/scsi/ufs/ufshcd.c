@@ -49,13 +49,6 @@
 #include "ufs-debugfs.h"
 #include "ufs-qcom.h"
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
-    defined(CONFIG_ARCH_SONY_KUMANO)
- #ifndef UFS_TARGET_SONY_PLATFORM
-  #define UFS_TARGET_SONY_PLATFORM
- #endif
-#endif
-
 #ifdef CONFIG_DEBUG_FS
 
 static int ufshcd_tag_req_type(struct request *rq)
@@ -414,7 +407,6 @@ static struct ufs_dev_fix ufs_fixups[] = {
 		UFS_DEVICE_NO_FASTAUTO),
 	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_HOST_PA_TACTIVATE),
-	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL, UFS_DEVICE_NO_VCCQ),
 	UFS_FIX(UFS_VENDOR_TOSHIBA, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_DELAY_BEFORE_LPM),
 	UFS_FIX(UFS_VENDOR_TOSHIBA, UFS_ANY_MODEL,
@@ -442,17 +434,6 @@ static struct ufs_dev_fix ufs_fixups[] = {
 		UFS_DEVICE_QUIRK_HS_G1_TO_HS_G3_SWITCH),
 	UFS_FIX(UFS_VENDOR_SKHYNIX, "hC8HL1",
 		UFS_DEVICE_QUIRK_HS_G1_TO_HS_G3_SWITCH),
-
-#if defined(UFS_TARGET_SONY_PLATFORM) || 1
-	UFS_FIX(UFS_VENDOR_SKHYNIX, UFS_ANY_MODEL,
-		UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH),
-	UFS_FIX_REVISION(UFS_VENDOR_SKHYNIX, UFS_MODEL_HYNIX_32GB,
-		UFS_REVISION_HYNIX, UFS_DEVICE_QUIRK_NO_PURGE),
-	UFS_FIX_REVISION(UFS_VENDOR_SKHYNIX, UFS_MODEL_HYNIX_64GB,
-		UFS_REVISION_HYNIX, UFS_DEVICE_QUIRK_NO_PURGE),
-	UFS_FIX_REVISION(UFS_VENDOR_SAMSUNG, UFS_MODEL_SAMSUNG_64GB,
-		UFS_REVISION_SAMSUNG, UFS_DEVICE_QUIRK_NO_PURGE),
-#endif
 
 	END_FIX
 };
@@ -494,6 +475,7 @@ static int ufshcd_config_vreg(struct device *dev,
 		struct ufs_vreg *vreg, bool on);
 static int ufshcd_enable_vreg(struct device *dev, struct ufs_vreg *vreg);
 static int ufshcd_disable_vreg(struct device *dev, struct ufs_vreg *vreg);
+static bool ufshcd_is_g4_supported(struct ufs_hba *hba);
 
 #if IS_ENABLED(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)
 static struct devfreq_simple_ondemand_data ufshcd_ondemand_data = {
@@ -1764,8 +1746,8 @@ static int ufshcd_clock_scaling_prepare(struct ufs_hba *hba)
 	 * make sure that there are no outstanding requests when
 	 * clock scaling is in progress
 	 */
-	down_write(&hba->lock);
 	ufshcd_scsi_block_requests(hba);
+	down_write(&hba->lock);
 	if (ufshcd_wait_for_doorbell_clr(hba, DOORBELL_CLR_TOUT_US)) {
 		ret = -EBUSY;
 		up_write(&hba->lock);
@@ -2784,8 +2766,8 @@ static void __ufshcd_set_auto_hibern8_timer(struct ufs_hba *hba,
 {
 	pm_runtime_get_sync(hba->dev);
 	ufshcd_hold_all(hba);
-	down_write(&hba->lock);
 	ufshcd_scsi_block_requests(hba);
+	down_write(&hba->lock);
 	/* wait for all the outstanding requests to finish */
 	ufshcd_wait_for_doorbell_clr(hba, U64_MAX);
 	ufshcd_set_auto_hibern8_timer(hba, delay_ms);
@@ -3095,8 +3077,7 @@ int ufshcd_copy_query_response(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 	memcpy(&query_res->upiu_res, &lrbp->ucd_rsp_ptr->qr, QUERY_OSF_SIZE);
 
 	/* Get the descriptor */
-	if (hba->dev_cmd.query.descriptor &&
-	    lrbp->ucd_rsp_ptr->qr.opcode == UPIU_QUERY_OPCODE_READ_DESC) {
+	if (lrbp->ucd_rsp_ptr->qr.opcode == UPIU_QUERY_OPCODE_READ_DESC) {
 		u8 *descp = (u8 *)lrbp->ucd_rsp_ptr +
 				GENERAL_UPIU_REQUEST_SIZE;
 		u16 resp_len;
@@ -3558,11 +3539,10 @@ static int ufshcd_comp_devman_upiu(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 	u32 upiu_flags;
 	int ret = 0;
 
-	if ((hba->ufs_version == UFSHCI_VERSION_10) ||
-	    (hba->ufs_version == UFSHCI_VERSION_11))
-		lrbp->command_type = UTP_CMD_TYPE_DEV_MANAGE;
-	else
+	if (hba->ufs_version == UFSHCI_VERSION_20)
 		lrbp->command_type = UTP_CMD_TYPE_UFS_STORAGE;
+	else
+		lrbp->command_type = UTP_CMD_TYPE_DEV_MANAGE;
 
 	ret = ufshcd_prepare_req_desc_hdr(hba, lrbp, &upiu_flags,
 			DMA_NONE);
@@ -3587,11 +3567,10 @@ static int ufshcd_comp_scsi_upiu(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 	u32 upiu_flags;
 	int ret = 0;
 
-	if ((hba->ufs_version == UFSHCI_VERSION_10) ||
-	    (hba->ufs_version == UFSHCI_VERSION_11))
-		lrbp->command_type = UTP_CMD_TYPE_SCSI;
-	else
+	if (hba->ufs_version == UFSHCI_VERSION_20)
 		lrbp->command_type = UTP_CMD_TYPE_UFS_STORAGE;
+	else
+		lrbp->command_type = UTP_CMD_TYPE_SCSI;
 
 	if (likely(lrbp->cmd)) {
 		ret = ufshcd_prepare_req_desc_hdr(hba, lrbp,
@@ -4028,13 +4007,8 @@ static int ufshcd_wait_for_dev_cmd(struct ufs_hba *hba,
 		ufshcd_outstanding_req_clear(hba, lrbp->task_tag);
 	}
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-	if (err)
-		ufsdbg_set_err_state(hba);
-#else
 	if (err && err != -EAGAIN)
 		ufsdbg_set_err_state(hba);
-#endif
 
 	return err;
 }
@@ -4423,10 +4397,10 @@ static int __ufshcd_query_descriptor(struct ufs_hba *hba,
 		goto out_unlock;
 	}
 
+	hba->dev_cmd.query.descriptor = NULL;
 	*buf_len = be16_to_cpu(response->upiu_res.length);
 
 out_unlock:
-	hba->dev_cmd.query.descriptor = NULL;
 	mutex_unlock(&hba->dev_cmd.lock);
 out:
 	ufshcd_release_all(hba);
@@ -4546,11 +4520,6 @@ int ufshcd_map_desc_id_to_length(struct ufs_hba *hba,
 	case QUERY_DESC_IDN_RFU_1:
 		*desc_len = 0;
 		break;
-#ifdef UFS_TARGET_SONY_PLATFORM
-	case QUERY_DESC_IDN_DEVICE_HEALTH:
-		*desc_len = hba->desc_size.dev_health_desc;
-		break;
-#endif
 	default:
 		*desc_len = 0;
 		return -EINVAL;
@@ -4659,14 +4628,6 @@ int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size)
 {
 	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE, 0, buf, size);
 }
-#ifdef UFS_TARGET_SONY_PLATFORM
-EXPORT_SYMBOL(ufshcd_read_device_desc);
-
-int ufshcd_read_device_health_desc(struct ufs_hba *hba, u8 *buf, u32 size)
-{
-	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE_HEALTH, 0, buf, size);
-}
-#endif
 
 /**
  * ufshcd_read_string_desc - read string descriptor
@@ -4679,10 +4640,7 @@ int ufshcd_read_device_health_desc(struct ufs_hba *hba, u8 *buf, u32 size)
  * Return 0 in case of success, non-zero otherwise
  */
 #define ASCII_STD true
-#ifndef UFS_TARGET_SONY_PLATFORM
-static
-#endif
-int ufshcd_read_string_desc(struct ufs_hba *hba, int desc_index,
+static int ufshcd_read_string_desc(struct ufs_hba *hba, int desc_index,
 				   u8 *buf, u32 size, bool ascii)
 {
 	int err = 0;
@@ -5542,11 +5500,6 @@ int ufshcd_change_power_mode(struct ufs_hba *hba,
 						pwr_mode->hs_rate);
 
 	if (pwr_mode->gear_tx == UFS_HS_G4) {
-#ifdef UFS_TARGET_SONY_PLATFORM
-		peer_rx_hs_adapt_initial_cap = PA_PEERRXHSADAPTINITIAL_Default;
-		ret = ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PEERRXHSADAPTINITIAL),
-				     peer_rx_hs_adapt_initial_cap);
-#else
 		ret = ufshcd_dme_peer_get(hba,
 				 UIC_ARG_MIB_SEL(RX_HS_ADAPT_INITIAL_CAPABILITY,
 					UIC_ARG_MPHY_RX_GEN_SEL_INDEX(0)),
@@ -5566,7 +5519,6 @@ int ufshcd_change_power_mode(struct ufs_hba *hba,
 	} else if (hba->ufs_version >= UFSHCI_VERSION_30) {
 		/* NO ADAPT */
 		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TXHSADAPTTYPE), PA_NO_ADAPT);
-#endif
 	}
 
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PWRMODEUSERDATA0),
@@ -5582,14 +5534,6 @@ int ufshcd_change_power_mode(struct ufs_hba *hba,
 			DL_TC0ReplayTimeOutVal_Default);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(DME_LocalAFC0ReqTimeOutVal),
 			DL_AFC0ReqTimeOutVal_Default);
-
-#ifdef UFS_TARGET_SONY_PLATFORM
-	if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH) {
-		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG1SyncLength), 0x48);
-		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG2SyncLength), 0x48);
-		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG3SyncLength), 0x48);
-	}
-#endif
 
 	ret = ufshcd_uic_change_pwr_mode(hba, pwr_mode->pwr_rx << 4
 			| pwr_mode->pwr_tx);
@@ -5865,10 +5809,6 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 {
 	int ret;
 	int retries = DME_LINKSTARTUP_RETRIES;
-
-#ifdef CONFIG_SCSI_UFS_RESTRICT_TX_LANES
-	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_AVAILTXDATALANES), 0x1);
-#endif
 
 	do {
 		ufshcd_vops_link_startup_notify(hba, PRE_CHANGE);
@@ -6709,7 +6649,6 @@ static int ufshcd_disable_auto_bkops(struct ufs_hba *hba)
 
 	hba->auto_bkops_enabled = false;
 	trace_ufshcd_auto_bkops_state(dev_name(hba->dev), 0);
-	hba->is_urgent_bkops_lvl_checked = false;
 out:
 	return err;
 }
@@ -6734,7 +6673,6 @@ static void ufshcd_force_reset_auto_bkops(struct ufs_hba *hba)
 		hba->ee_ctrl_mask &= ~MASK_EE_URGENT_BKOPS;
 		ufshcd_disable_auto_bkops(hba);
 	}
-	hba->is_urgent_bkops_lvl_checked = false;
 }
 
 static inline int ufshcd_get_bkops_status(struct ufs_hba *hba, u32 *status)
@@ -6781,7 +6719,6 @@ static int ufshcd_bkops_ctrl(struct ufs_hba *hba,
 		err = ufshcd_enable_auto_bkops(hba);
 	else
 		err = ufshcd_disable_auto_bkops(hba);
-	hba->urgent_bkops_lvl = curr_status;
 out:
 	return err;
 }
@@ -7220,10 +7157,8 @@ static void ufshcd_rls_handler(struct work_struct *work)
 
 	hba = container_of(work, struct ufs_hba, rls_work);
 	pm_runtime_get_sync(hba->dev);
-	down_write(&hba->lock);
 	ufshcd_scsi_block_requests(hba);
-	if (ufshcd_is_shutdown_ongoing(hba))
-		goto out;
+	down_write(&hba->lock);
 	ret = ufshcd_wait_for_doorbell_clr(hba, U64_MAX);
 	if (ret) {
 		dev_err(hba->dev,
@@ -7761,16 +7696,11 @@ static int ufshcd_abort(struct scsi_cmnd *cmd)
 	 * To avoid these unnecessary/illegal step we skip to the last error
 	 * handling stage: reset and restore.
 	 */
-#ifdef UFS_TARGET_SONY_PLATFORM
-	if (lrbp->lun == UFS_UPIU_UFS_DEVICE_WLUN)
-		return ufshcd_eh_host_reset_handler(cmd);
-#else
 	if ((lrbp->lun == UFS_UPIU_UFS_DEVICE_WLUN) ||
 	    (lrbp->lun == UFS_UPIU_REPORT_LUNS_WLUN) ||
 	    (lrbp->lun == UFS_UPIU_BOOT_WLUN) ||
 	    (lrbp->lun == UFS_UPIU_RPMB_WLUN))
 		return ufshcd_eh_host_reset_handler(cmd);
-#endif
 
 	ufshcd_hold_all(hba);
 	reg = ufshcd_readl(hba, REG_UTP_TRANSFER_REQ_DOOR_BELL);
@@ -8208,7 +8138,7 @@ static int ufshcd_set_low_vcc_level(struct ufs_hba *hba,
 	struct ufs_vreg *vreg = hba->vreg_info.vcc;
 
 	/* Check if device supports the low voltage VCC feature */
-	if (dev_desc->wspecversion < 0x300)
+	if (dev_desc->wspecversion < 0x300 && !ufshcd_is_g4_supported(hba))
 		return 0;
 
 	/*
@@ -8373,22 +8303,6 @@ static int ufs_get_device_desc(struct ufs_hba *hba,
 	dev_desc->wspecversion = desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8 |
 				  desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1];
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-	memset(str_desc_buf, 0, QUERY_DESC_MAX_SIZE);
-	err = ufshcd_read_string_desc(hba, hba->dev_info.revision,
-			str_desc_buf, QUERY_DESC_MAX_SIZE, ASCII_STD);
-
-	if (err)
-		goto out;
-
-	str_desc_buf[QUERY_DESC_MAX_SIZE] = '\0';
-	strlcpy(dev_desc->fw_revision, (str_desc_buf + QUERY_DESC_HDR_SIZE),
-		min_t(u8, str_desc_buf[QUERY_DESC_LENGTH_OFFSET],
-		      MAX_REVISION_LEN));
-	/* Null terminate the fw_revision string */
-	dev_desc->fw_revision[MAX_REVISION_LEN] = '\0';
-#endif
-
 out:
 	return err;
 }
@@ -8398,31 +8312,12 @@ static void ufs_fixup_device_setup(struct ufs_hba *hba,
 {
 	struct ufs_dev_fix *f;
 
-	dev_info(hba->dev, "%s : vid=%04x, model=%s, spec ver=%04x , "
-		"fw ver=%s\n", __func__, hba->dev_info.w_manufacturer_id,
-		 dev_desc->model, hba->dev_info.w_spec_version,
-		 dev_desc->fw_revision);
-
-	if (hba->dev_info.w_spec_version < UFS_PURGE_SPEC_VER)
-	    hba->dev_info.quirks |= UFS_DEVICE_QUIRK_NO_PURGE;
-
 	for (f = ufs_fixups; f->quirk; f++) {
 		if ((f->w_manufacturer_id == dev_desc->wmanufacturerid ||
 		     f->w_manufacturer_id == UFS_ANY_VENDOR) &&
-#ifdef UFS_TARGET_SONY_PLATFORM
-		    (STR_PRFX_EQUAL(f->model, dev_desc->model) ||
-		     !strncmp(f->model, UFS_ANY_MODEL, strlen(UFS_ANY_MODEL)))  &&
-		    /* and same fw revision*/
-		    (STR_PRFX_EQUAL(f->revision, dev_desc->fw_revision) ||
-		     !strncmp(f->revision, UFS_ANY_VER, strlen(UFS_ANY_VER)))) {
-			/* update quirks */
-			hba->dev_info.quirks |= f->quirk;
-		}
-#else
 		    (STR_PRFX_EQUAL(f->model, dev_desc->model) ||
 		     !strcmp(f->model, UFS_ANY_MODEL)))
 			hba->dev_info.quirks |= f->quirk;
-#endif
 	}
 }
 
@@ -8639,13 +8534,6 @@ static void ufshcd_init_desc_sizes(struct ufs_hba *hba)
 		&hba->desc_size.geom_desc);
 	if (err)
 		hba->desc_size.geom_desc = QUERY_DESC_GEOMETRY_DEF_SIZE;
-
-#ifdef UFS_TARGET_SONY_PLATFORM
-	err = ufshcd_read_desc_length(hba, QUERY_DESC_IDN_DEVICE_HEALTH, 0,
-		&hba->desc_size.dev_health_desc);
-	if (err)
-		hba->desc_size.dev_health_desc = QUERY_DESC_DEVICE_HEALTH_DEF_SIZE;
-#endif
 }
 
 static void ufshcd_def_desc_sizes(struct ufs_hba *hba)
@@ -8656,10 +8544,6 @@ static void ufshcd_def_desc_sizes(struct ufs_hba *hba)
 	hba->desc_size.conf_desc = QUERY_DESC_CONFIGURATION_DEF_SIZE;
 	hba->desc_size.unit_desc = QUERY_DESC_UNIT_DEF_SIZE;
 	hba->desc_size.geom_desc = QUERY_DESC_GEOMETRY_DEF_SIZE;
-
-#ifdef UFS_TARGET_SONY_PLATFORM
-	hba->desc_size.dev_health_desc = QUERY_DESC_DEVICE_HEALTH_DEF_SIZE;
-#endif
 }
 
 static void ufshcd_apply_pm_quirks(struct ufs_hba *hba)
@@ -8799,13 +8683,37 @@ static int ufs_read_device_desc_data(struct ufs_hba *hba)
 		desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8 |
 		desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1];
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-	hba->dev_info.revision = desc_buf[DEVICE_DESC_PARAM_PRODUCT_REVISION];
-#endif
-
 out:
 	kfree(desc_buf);
 	return err;
+}
+
+/**
+ * ufshcd_is_g4_supported - check if device supports HS-G4
+ * @hba: per-adapter instance
+ *
+ * Returns True if device supports HS-G4, False otherwise.
+ */
+static bool ufshcd_is_g4_supported(struct ufs_hba *hba)
+{
+	int ret;
+	u32 tx_hsgear = 0;
+
+	/* check device capability */
+	ret = ufshcd_dme_peer_get(hba,
+			UIC_ARG_MIB_SEL(TX_HSGEAR_CAPABILITY,
+			UIC_ARG_MPHY_TX_GEN_SEL_INDEX(0)),
+			&tx_hsgear);
+	if (ret) {
+		dev_err(hba->dev, "%s: Failed getting peer TX_HSGEAR_CAPABILITY. err = %d\n",
+			__func__, ret);
+		return false;
+	}
+
+	if (tx_hsgear == UFS_HS_G4)
+		return true;
+	else
+		return false;
 }
 
 /**
@@ -8860,7 +8768,13 @@ reinit:
 		goto out;
 	}
 
-	if (card.wspecversion >= 0x300 && !hba->reinit_g4_rate_A) {
+	/*
+	 * Note: Some UFS 3.0 devices may still advertise UFS specification
+	 * version as 2.1. So let's also read the TX_HSGEAR_CAPABILITY from
+	 * device to know if device support HS-G4 or not.
+	 */
+	if ((card.wspecversion >= 0x300 || ufshcd_is_g4_supported(hba)) &&
+	    !hba->reinit_g4_rate_A) {
 		unsigned long flags;
 		int err;
 
@@ -8892,13 +8806,10 @@ reinit:
 	ufshcd_tune_unipro_params(hba);
 
 	ufshcd_apply_pm_quirks(hba);
-	if (card.wspecversion < 0x300) {
-		ret = ufshcd_set_vccq_rail_unused(hba,
-			(hba->dev_info.quirks & UFS_DEVICE_NO_VCCQ) ?
-			true : false);
-		if (ret)
-			goto out;
-	}
+	ret = ufshcd_set_vccq_rail_unused(hba,
+		(hba->dev_info.quirks & UFS_DEVICE_NO_VCCQ) ? true : false);
+	if (ret)
+		goto out;
 
 	/* UFS device is also active now */
 	ufshcd_set_ufs_dev_active(hba);
@@ -8947,8 +8858,7 @@ reinit:
 			hba->dev_info.f_power_on_wp_en = flag;
 
 		/* Add required well known logical units to scsi mid layer */
-		ret = ufshcd_scsi_add_wlus(hba);
-		if (ret)
+		if (ufshcd_scsi_add_wlus(hba))
 			goto out;
 
 		/* lower VCC voltage level */
@@ -9189,11 +9099,7 @@ static enum blk_eh_timer_return ufshcd_eh_timed_out(struct scsi_cmnd *scmd)
  * It will read the opcode, idn and buf_length parameters, and, put the
  * response in the buffer field while updating the used size in buf_length.
  */
-#ifdef UFS_TARGET_SONY_PLATFORM
-static int ufshcd_query_ioctl(struct scsi_device *dev, u8 lun, void __user *buffer)
-#else
 static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
-#endif
 {
 	struct ufs_ioctl_query_data *ioctl_data;
 	int err = 0;
@@ -9203,10 +9109,6 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 	u32 att;
 	u8 index;
 	u8 *desc = NULL;
-
-#ifdef UFS_TARGET_SONY_PLATFORM
-	struct ufs_hba *hba = shost_priv(dev->host);
-#endif
 
 	ioctl_data = kzalloc(sizeof(struct ufs_ioctl_query_data), GFP_KERNEL);
 	if (!ioctl_data) {
@@ -9269,9 +9171,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_ATTR_IDN_ACTIVE_ICC_LVL:
 		case QUERY_ATTR_IDN_OOO_DATA_EN:
 		case QUERY_ATTR_IDN_BKOPS_STATUS:
-#ifndef UFS_TARGET_SONY_PLATFORM
- 		case QUERY_ATTR_IDN_PURGE_STATUS:
-#endif
+		case QUERY_ATTR_IDN_PURGE_STATUS:
 		case QUERY_ATTR_IDN_MAX_DATA_IN:
 		case QUERY_ATTR_IDN_MAX_DATA_OUT:
 		case QUERY_ATTR_IDN_REF_CLK_FREQ:
@@ -9280,24 +9180,12 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_ATTR_IDN_EE_CONTROL:
 		case QUERY_ATTR_IDN_EE_STATUS:
 		case QUERY_ATTR_IDN_SECONDS_PASSED:
-#ifdef UFS_TARGET_SONY_PLATFORM
-		case QUERY_ATTR_IDN_FFU_STATUS:
-#endif
 			index = 0;
 			break;
 		case QUERY_ATTR_IDN_DYN_CAP_NEEDED:
 		case QUERY_ATTR_IDN_CORR_PRG_BLK_NUM:
 			index = lun;
 			break;
-#ifdef UFS_TARGET_SONY_PLATFORM
-		case QUERY_ATTR_IDN_PURGE_STATUS:
-			index = 0;
-			if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
-				err = -EPERM;
-				goto out_release_mem;
-			}
-			break;
-#endif
 		default:
 			goto out_einval;
 		}
@@ -9319,11 +9207,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		switch (ioctl_data->idn) {
 		case QUERY_ATTR_IDN_BOOT_LU_EN:
 			index = 0;
-#ifdef UFS_TARGET_SONY_PLATFORM
-			if (att > QUERY_ATTR_IDN_BOOT_LU_EN_MAX) {
-#else
 			if (!att || att > QUERY_ATTR_IDN_BOOT_LU_EN_MAX) {
-#endif
 				dev_err(hba->dev,
 					"%s: Illegal ufs query ioctl data, opcode 0x%x, idn 0x%x, att 0x%x\n",
 					__func__, ioctl_data->opcode,
@@ -9345,43 +9229,16 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_FLAG_IDN_PERMANENT_WPE:
 		case QUERY_FLAG_IDN_PWR_ON_WPE:
 		case QUERY_FLAG_IDN_BKOPS_EN:
-#ifndef UFS_TARGET_SONY_PLATFORM
- 		case QUERY_FLAG_IDN_PURGE_ENABLE:
-#endif
+		case QUERY_FLAG_IDN_PURGE_ENABLE:
 		case QUERY_FLAG_IDN_FPHYRESOURCEREMOVAL:
 		case QUERY_FLAG_IDN_BUSY_RTC:
 			break;
-#ifdef UFS_TARGET_SONY_PLATFORM
-		case QUERY_FLAG_IDN_PURGE_ENABLE:
-			if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
-				err = -EPERM;
-				goto out_release_mem;
-			}
-			break;
-#endif
 		default:
 			goto out_einval;
 		}
 		err = ufshcd_query_flag_retry(hba, ioctl_data->opcode,
 			ioctl_data->idn, &flag);
 		break;
-#ifdef UFS_TARGET_SONY_PLATFORM
-	case UPIU_QUERY_OPCODE_SET_FLAG:
-		switch (ioctl_data->idn) {
-		case QUERY_FLAG_IDN_PURGE_ENABLE:
-			if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
-				err = -EPERM;
-				goto out_release_mem;
-			}
-			pm_runtime_disable(&dev->sdev_gendev);
-			break;
-		default:
-			goto out_einval;
-		}
-		err = ufshcd_query_flag_retry(hba, ioctl_data->opcode,
-				ioctl_data->idn, NULL);
-		break;
-#endif
 	default:
 		goto out_einval;
 	}
@@ -9412,9 +9269,6 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		data_ptr = &flag;
 		break;
 	case UPIU_QUERY_OPCODE_WRITE_ATTR:
-#ifdef UFS_TARGET_SONY_PLATFORM
-	case UPIU_QUERY_OPCODE_SET_FLAG:
-#endif
 		goto out_release_mem;
 	default:
 		goto out_einval;
@@ -9445,94 +9299,6 @@ out:
 	return err;
 }
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-static int ufshcd_write_buffer(struct ufs_hba *hba, void __user *buffer)
-{
-	int err = 0;
-	unsigned char cmd[11] = {WRITE_BUFFER, 0x0E, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	struct ufs_ioctl_write_buffer_data *ioctl_data = NULL;
-	struct ufs_ioctl_write_buffer_data *fw_data = NULL;
-	struct Scsi_Host *shost = NULL;
-	struct scsi_device *sdev = NULL;
-	unsigned char sense[SCSI_SENSE_BUFFERSIZE];
-	struct scsi_sense_hdr sshdr;
-
-	ioctl_data = kmalloc(sizeof(struct ufs_ioctl_write_buffer_data), GFP_KERNEL);
-	if (!ioctl_data) {
-		dev_err(hba->dev, "%s: Failed allocating ioctl_data\n", __func__);
-		err = -ENOMEM;
-		goto out;
-	}
-
-	err = copy_from_user(ioctl_data, buffer, sizeof(struct ufs_ioctl_write_buffer_data));
-	if (err) {
-		dev_err(hba->dev, "%s: Failed copying ioctl_data from user, err %d\n", __func__, err);
-		goto out;
-	}
-
-	fw_data = kmalloc(sizeof(struct ufs_ioctl_write_buffer_data) + ioctl_data->buf_size, GFP_KERNEL);
-	if (!fw_data) {
-		dev_err(hba->dev, "%s: Failed allocating fw_data\n", __func__);
-		err = -ENOMEM;
-		goto out;
-	}
-
-	err = copy_from_user(fw_data, buffer, sizeof(struct ufs_ioctl_write_buffer_data) + ioctl_data->buf_size);
-	if (err) {
-		dev_err(hba->dev, "%s: Failed copying fw_data from user, err %d\n", __func__, err);
-		goto out;
-	}
-
-	cmd[6] = (ioctl_data->buf_size >> 16) & 0xff;
-	cmd[7] = (ioctl_data->buf_size >> 8) & 0xff;
-	cmd[8] = ioctl_data->buf_size & 0xff;
-
-	shost = scsi_host_lookup(0);
-	if (!shost) {
-		dev_err(hba->dev, "%s: Failed to get scsi_host\n", __func__);
-		err = -ENODEV;
-		goto out;
-	}
-
-	sdev = scsi_device_lookup(shost, 0, 0, 0);
-	if (!sdev) {
-		dev_err(hba->dev, "%s: Failed to get scsi_device\n", __func__);
-		err = -ENODEV;
-		goto out;
-	}
-
-	err = scsi_execute(sdev, cmd, DMA_TO_DEVICE, fw_data->buffer, ioctl_data->buf_size, sense, &sshdr,10000, 1,
-						REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT | REQ_FAILFAST_DRIVER, 0, NULL);
-	if (err) {
-		dev_err(hba->dev, "%s: Failed write buffer %d\n", __func__, err);
-		goto out;
-	}
-
-	if (scsi_normalize_sense(sense, SCSI_SENSE_BUFFERSIZE, &sshdr)) {
-		dev_err(hba->dev, "%s: print sense hdr\n", __func__);
-		scsi_print_sense_hdr(sdev, "ffu", &sshdr);
-	}
-
-out:
-	if (sdev) {
-		scsi_device_put(sdev);
-	}
-
-	if (shost) {
-		scsi_host_put(shost);
-	}
-
-	if (fw_data) {
-		kfree(fw_data);
-	}
-
-	if (ioctl_data) {
-		kfree(ioctl_data);
-	}
-	return err;
-}
-#endif
-
 /**
  * ufshcd_ioctl - ufs ioctl callback registered in scsi_host
  * @dev: scsi device required for per LUN queries
@@ -9556,22 +9322,10 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buffer)
 	switch (cmd) {
 	case UFS_IOCTL_QUERY:
 		pm_runtime_get_sync(hba->dev);
-#ifdef UFS_TARGET_SONY_PLATFORM
-		err = ufshcd_query_ioctl(dev, ufshcd_scsi_to_upiu_lun(dev->lun),
-				buffer);
-#else
 		err = ufshcd_query_ioctl(hba, ufshcd_scsi_to_upiu_lun(dev->lun),
 				buffer);
-#endif
 		pm_runtime_put_sync(hba->dev);
 		break;
-#ifdef UFS_TARGET_SONY_PLATFORM
-	case UFS_IOCTL_WRITE_BUFFER:
-		pm_runtime_get_sync(hba->dev);
-		err = ufshcd_write_buffer(hba, buffer);
-		pm_runtime_put_sync(hba->dev);
-		break;
-#endif
 	default:
 		err = -ENOIOCTLCMD;
 		dev_dbg(hba->dev, "%s: Unsupported ioctl cmd %d\n", __func__,
@@ -10694,8 +10448,6 @@ out:
 	trace_ufshcd_system_resume(dev_name(hba->dev), ret,
 		ktime_to_us(ktime_sub(ktime_get(), start)),
 		hba->curr_dev_pwr_mode, hba->uic_link_state);
-	if (!ret)
-		hba->is_sys_suspended = false;
 	return ret;
 }
 EXPORT_SYMBOL(ufshcd_system_resume);
@@ -10952,9 +10704,6 @@ static void ufshcd_shutdown_clkscaling(struct ufs_hba *hba)
 int ufshcd_shutdown(struct ufs_hba *hba)
 {
 	int ret = 0;
-
-	if (!hba->is_powered)
-		goto out;
 
 	if (ufshcd_is_ufs_dev_poweroff(hba) && ufshcd_is_link_off(hba))
 		goto out;

@@ -1332,9 +1332,8 @@ static void aac_handle_aif(struct aac_dev * dev, struct fib * fibptr)
 				  ADD : DELETE;
 				break;
 			}
-			break;
-		case AifBuManagerEvent:
-			aac_handle_aif_bu(dev, aifcmd);
+			case AifBuManagerEvent:
+				aac_handle_aif_bu(dev, aifcmd);
 			break;
 		}
 

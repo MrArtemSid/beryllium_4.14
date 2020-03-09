@@ -80,13 +80,6 @@
 #define UFS_BIT(x)	BIT(x)
 #define UFS_MASK(x, y)	(x << ((y) % BITS_PER_LONG))
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
-    defined(CONFIG_ARCH_SONY_KUMANO)
- #ifndef UFS_TARGET_SONY_PLATFORM
-  #define UFS_TARGET_SONY_PLATFORM
- #endif
-#endif
-
 struct ufs_hba;
 
 enum dev_cmd_type {
@@ -264,9 +257,6 @@ struct ufs_desc_size {
 	int interc_desc;
 	int unit_desc;
 	int conf_desc;
-#ifdef UFS_TARGET_SONY_PLATFORM
-	int dev_health_desc;
-#endif
 };
 
 /**
@@ -569,11 +559,6 @@ struct debugfs_files {
 	struct dentry *dbg_print_en;
 	struct dentry *req_stats;
 	struct dentry *query_stats;
-#ifdef UFS_TARGET_SONY_PLATFORM
-	struct dentry *fw_revision;
-	struct dentry *dump_dev_health_desc;
-	struct dentry *serial;
-#endif
 	u32 dme_local_attr_id;
 	u32 dme_peer_attr_id;
 	struct dentry *reset_controller;
@@ -1272,10 +1257,6 @@ out:
 
 int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size);
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-int ufshcd_read_device_health_desc(struct ufs_hba *hba, u8 *buf, u32 size);
-#endif
-
 static inline bool ufshcd_is_hs_mode(struct ufs_pa_layer_attr *pwr_info)
 {
 	return (pwr_info->pwr_rx == FAST_MODE ||
@@ -1299,13 +1280,6 @@ static inline void ufshcd_init_req_stats(struct ufs_hba *hba)
 }
 #else
 static inline void ufshcd_init_req_stats(struct ufs_hba *hba) {}
-#endif
-
-#ifdef UFS_TARGET_SONY_PLATFORM
-#define ASCII_STD true
-#define UTF16_STD false
-int ufshcd_read_string_desc(struct ufs_hba *hba, int desc_index, u8 *buf,
-				u32 size, bool ascii);
 #endif
 
 /* Expose Query-Request API */
