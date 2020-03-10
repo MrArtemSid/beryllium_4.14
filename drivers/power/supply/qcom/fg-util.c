@@ -939,8 +939,8 @@ int fg_get_msoc(struct fg_dev *fg, int *msoc)
 	 * be suitable here as it rounds up any value higher than 252 to 100.
 	 */
 
-	if ((*msoc >= FULL_SOC_REPORT_THR)
-			&& (*msoc < FULL_SOC_RAW) && chip->report_full) {
+	if ((*msoc >= 250)
+			&& (*msoc < FULL_SOC_RAW) && fg->report_full) {
 		*msoc = DIV_ROUND_CLOSEST(*msoc * FULL_CAPACITY, FULL_SOC_RAW) + 1;
 		if (*msoc >= FULL_CAPACITY)
 			*msoc = FULL_CAPACITY;

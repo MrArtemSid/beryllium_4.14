@@ -215,7 +215,6 @@ enum fg_sram_param_id {
 	FG_SRAM_CHG_TERM_CURR,
 	FG_SRAM_CHG_TERM_BASE_CURR,
 	FG_SRAM_CUTOFF_CURR,
-	FG_SRAM_CUTOFF_CURR,
 	FG_SRAM_DELTA_MSOC_THR,
 	FG_SRAM_DELTA_BSOC_THR,
 	FG_SRAM_RECHARGE_SOC_THR,
@@ -440,6 +439,22 @@ static const struct fg_pt fg_ln_table[] = {
 	{ 128000,	4852 },
 };
 
+#define BATT_MA_AVG_SAMPLES		8
+struct batt_params {
+	bool	update_now;
+	int		batt_raw_soc;
+	int		batt_soc;
+	int		samples_num;
+	int		samples_index;
+	int		batt_ma_avg_samples[BATT_MA_AVG_SAMPLES];
+	int		batt_ma_avg;
+	int		batt_ma_prev;
+	int		batt_ma;
+	int		batt_mv;
+	int		batt_temp;
+	struct timespec		last_soc_change_time;
+};
+
 /* each tuple is - <temperature in degC, Timebase> */
 static const struct fg_pt fg_tsmc_osc_table[] = {
 	{ -20,		395064 },
@@ -528,8 +543,10 @@ struct fg_dev {
 	bool			recharge_soc_adjusted;
 	bool			soc_reporting_ready;
 	bool			use_ima_single_mode;
+	bool			report_full;
 	bool			use_dma;
 	bool			qnovo_enable;
+	bool			empty_restart_fg;
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	bool			is_fg_gen4;
@@ -573,11 +590,16 @@ struct fg_dev {
 #endif
 
 	enum fg_version		version;
+	struct batt_params	param;
+	struct delayed_work	soc_monitor_work;
 	struct completion	soc_update;
 	struct completion	soc_ready;
 	struct delayed_work	profile_load_work;
 	struct work_struct	status_change_work;
+	struct delayed_work	esr_timer_config_work;
 	struct delayed_work	sram_dump_work;
+	struct delayed_work	soc_work;
+	struct delayed_work	empty_restart_fg_work;
 };
 
 /* Debugfs data structures are below */

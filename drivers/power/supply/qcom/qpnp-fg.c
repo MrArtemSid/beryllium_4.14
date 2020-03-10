@@ -421,6 +421,7 @@ struct fg_chip {
 	struct fg_irq		soc_irq[FG_SOC_IRQ_COUNT];
 	struct fg_irq		batt_irq[FG_BATT_IRQ_COUNT];
 	struct fg_irq		mem_irq[FG_MEM_IF_IRQ_COUNT];
+	struct batt_params	param;
 	struct completion	sram_access_granted;
 	struct completion	sram_access_revoked;
 	struct completion	batt_id_avail;
@@ -430,6 +431,9 @@ struct fg_chip {
 	struct mutex		rw_lock;
 	struct mutex		sysfs_restart_lock;
 	struct delayed_work	batt_profile_init;
+	struct delayed_work	soc_work;
+	struct delayed_work	soc_monitor_work;
+	struct delayed_work	esr_timer_config_work;
 	struct work_struct	dump_sram;
 	struct work_struct	status_change_work;
 	struct work_struct	cycle_count_work;
@@ -455,6 +459,8 @@ struct fg_chip {
 	struct fg_wakeup_source	update_temp_wakeup_source;
 	struct fg_wakeup_source	update_sram_wakeup_source;
 	bool			fg_restarting;
+	bool			empty_restart_fg;
+	bool			report_full;
 	bool			profile_loaded;
 	bool			use_otp_profile;
 	bool			battery_missing;
@@ -525,6 +531,7 @@ struct fg_chip {
 	bool			esr_extract_disabled;
 	bool			imptr_pulse_slow_en;
 	bool			esr_pulse_tune_en;
+	struct delayed_work	empty_restart_fg_work;
 #ifdef CONFIG_QPNP_FG_EXTENSION
 	struct fg_somc_params	somc_params;
 #endif

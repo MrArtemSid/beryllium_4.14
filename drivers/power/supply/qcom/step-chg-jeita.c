@@ -20,7 +20,6 @@
 #include <linux/pmic-voter.h>
 #include "step-chg-jeita.h"
 
-#define MAX_STEP_CHG_ENTRIES	4
 #define STEP_CHG_VOTER		"STEP_CHG_VOTER"
 #define JEITA_VOTER		"JEITA_VOTER"
 
@@ -29,12 +28,6 @@
 			&& (value) >= (right)) \
 		|| ((left) <= (right) && (left) <= (value) \
 			&& (value) <= (right)))
-
-struct range_data {
-	int low_threshold;
-	int  high_threshold;
-	int value;
-};
 
 struct step_chg_cfg {
 	struct step_chg_jeita_param	param;

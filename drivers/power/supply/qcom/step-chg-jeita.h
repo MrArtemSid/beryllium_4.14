@@ -25,7 +25,7 @@ struct step_chg_jeita_param {
 struct range_data {
 	int low_threshold;
 	int high_threshold;
-	u32 value;
+	int value;
 };
 
 int qcom_step_chg_init(struct device *dev,
