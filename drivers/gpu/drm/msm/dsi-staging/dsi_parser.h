@@ -162,6 +162,12 @@ static inline int dsi_parser_get_named_gpio(struct device_node *np,
 	return -ENODEV;
 }
 
+static inline int dsi_parser_get_named_gpio_flags(struct device_node *np,
+                const char *list_name, int index, enum of_gpio_flags *flags)
+{
+	return -ENODEV;
+}
+
 #endif /* CONFIG_DSI_PARSER */
 
 #define dsi_for_each_child_node(parent, child) \
@@ -197,6 +203,8 @@ struct dsi_parser_utils {
 		const char *propname);
 	int (*get_named_gpio)(struct device_node *np,
 				const char *propname, int index);
+	int (*get_named_gpio_flags)(struct device_node *np,
+		const char *list_name, int index, enum of_gpio_flags *flags);
 	int (*get_available_child_count)(const struct device_node *np);
 };
 
@@ -216,6 +224,7 @@ static inline struct dsi_parser_utils *dsi_parser_get_of_utils(void)
 		.get_next_child = of_get_next_child,
 		.count_u32_elems = of_property_count_u32_elems,
 		.get_named_gpio = of_get_named_gpio,
+		.get_named_gpio_flags = of_get_named_gpio_flags,
 	};
 
 	return &of_utils;
@@ -237,6 +246,7 @@ static inline struct dsi_parser_utils *dsi_parser_get_parser_utils(void)
 		.get_next_child = dsi_parser_get_next_child,
 		.count_u32_elems = dsi_parser_count_u32_elems,
 		.get_named_gpio = dsi_parser_get_named_gpio,
+		.get_named_gpio_flags = dsi_parser_get_named_gpio_flags,
 	};
 
 	return &parser_utils;

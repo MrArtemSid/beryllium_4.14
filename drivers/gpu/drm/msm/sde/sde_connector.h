@@ -380,11 +380,7 @@ struct sde_connector_evt {
  * @event_lock: Lock object for event_table
  * @bl_device: backlight device node
  * @status_work: work object to perform status checks
-<<<<<<< HEAD
  * @esd_status_interval: variable to change ESD check interval in millisec
-=======
- * @force_panel_dead: variable to trigger forced ESD recovery
->>>>>>> 9684bea8988e... drivers: gpu: drm: Import Xiaomi changes
  * @panel_dead: Flag to indicate if panel has gone bad
  * @esd_status_check: Flag to indicate if ESD thread is scheduled or not
  * @bl_scale_dirty: Flag to indicate PP BL scale value(s) is changed
@@ -433,12 +429,8 @@ struct sde_connector {
 
 	struct backlight_device *bl_device;
 	struct delayed_work status_work;
-<<<<<<< HEAD
 	u32 esd_status_interval;
-=======
-	u32 force_panel_dead;
 
->>>>>>> 9684bea8988e... drivers: gpu: drm: Import Xiaomi changes
 	bool panel_dead;
 	bool esd_status_check;
 
@@ -880,7 +872,6 @@ void sde_conn_timeline_status(struct drm_connector *conn);
 void sde_connector_helper_bridge_disable(struct drm_connector *connector);
 
 /**
-<<<<<<< HEAD
  * sde_connector_destroy - destroy drm connector object
  * @connector: Pointer to DRM connector object
  */
@@ -896,14 +887,11 @@ void sde_connector_destroy(struct drm_connector *connector);
 int sde_connector_event_notify(struct drm_connector *connector, uint32_t type,
 		uint32_t len, uint32_t val);
 /**
-=======
->>>>>>> 9684bea8988e... drivers: gpu: drm: Import Xiaomi changes
  * sde_connector_helper_bridge_enable - helper function for drm bridge enable
  * @connector: Pointer to DRM connector object
  */
 void sde_connector_helper_bridge_enable(struct drm_connector *connector);
 
-<<<<<<< HEAD
 /**
  * sde_connector_get_panel_vfp - helper to get panel vfp
  * @connector: pointer to drm connector
@@ -918,7 +906,5 @@ int sde_connector_get_panel_vfp(struct drm_connector *connector,
  * @connector: Pointer to DRM connector object
  */
 int sde_connector_esd_status(struct drm_connector *connector);
-=======
->>>>>>> 9684bea8988e... drivers: gpu: drm: Import Xiaomi changes
 
 #endif /* _SDE_CONNECTOR_H_ */

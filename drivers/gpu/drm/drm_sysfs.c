@@ -20,6 +20,7 @@
 
 #include <drm/drm_sysfs.h>
 #include <drm/drmP.h>
+#include <drm/drm_encoder.h>
 #include "drm_internal.h"
 
 #define to_drm_minor(d) dev_get_drvdata(d)

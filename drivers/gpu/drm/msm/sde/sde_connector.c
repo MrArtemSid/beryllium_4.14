@@ -2038,7 +2038,7 @@ static irqreturn_t esd_err_irq_handle(int irq, void *data)
 	SDE_ERROR("esd check irq report PANEL_DEAD conn_id: %d enc_id: %d\n",
 		c_conn->base.base.id, c_conn->encoder->base.id);
 
-	_sde_connector_report_panel_dead(conn, false);
+	_sde_connector_report_panel_dead(c_conn, false);
 
 	return IRQ_HANDLED;
 }
