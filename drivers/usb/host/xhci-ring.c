@@ -1366,7 +1366,7 @@ void xhci_handle_command_timeout(struct work_struct *work)
 		/* Prevent new doorbell, and start command abort */
 		xhci->cmd_ring_state = CMD_RING_STATE_ABORTED;
 		xhci_dbg(xhci, "Command timeout\n");
-		ret = xhci_abort_cmd_ring(xhci, flags);
+		int ret = xhci_abort_cmd_ring(xhci, flags);
 		if (ret == -1) {
 			xhci_err(xhci, "Abort command ring failed reset USB device\n");
 			xhci_cleanup_command_queue(xhci);
