@@ -173,13 +173,10 @@ int of_thermal_aggregate_trip(struct thermal_zone_device *tz,
 			      enum thermal_trip_type type,
 			      int *low, int *high);
 void of_thermal_handle_trip(struct thermal_zone_device *tz);
-<<<<<<< HEAD
 void of_thermal_handle_trip_temp(struct thermal_zone_device *tz,
 					int trip_temp);
-=======
 int of_parse_thermal_message(void);
 void free_thermal_message(void);
->>>>>>> 4685495544c8... drivers: thermal: Import Xiaomi changes
 #else
 static inline int of_parse_thermal_zones(void) { return 0; }
 static inline void of_thermal_destroy_zones(void) { }
