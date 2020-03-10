@@ -734,7 +734,7 @@ int qpnp_pon_is_ps_hold_reset(void)
 
 	rc = regmap_read(pon->regmap, QPNP_POFF_REASON1(pon), &reg);
 	if (rc) {
-		dev_err(&pon->pdev->dev,
+		dev_err(pon->dev,
 				"Unable to read addr=%x, rc(%d)\n",
 				QPNP_POFF_REASON1(pon), rc);
 		return 0;
@@ -744,13 +744,13 @@ int qpnp_pon_is_ps_hold_reset(void)
 	if (reg & 0x2)
 		return 1;
 
-	dev_info(&pon->pdev->dev,
+	dev_info(pon->dev,
 			"hw_reset reason1 is 0x%x\n",
 			reg);
 
 	rc = regmap_read(pon->regmap, QPNP_POFF_REASON2(pon), &reg);
 
-	dev_info(&pon->pdev->dev,
+	dev_info(pon->dev,
 			"hw_reset reason2 is 0x%x\n",
 			reg);
 	return 0;
@@ -768,7 +768,7 @@ int qpnp_pon_is_lpk(void)
 
 	rc = regmap_read(pon->regmap, QPNP_POFF_REASON1(pon), &reg);
 	if (rc) {
-		dev_err(&pon->pdev->dev,
+		dev_err(pon->dev,
 				"Unable to read addr=%x, rc(%d)\n",
 				QPNP_POFF_REASON1(pon), rc);
 		return 0;
@@ -778,13 +778,13 @@ int qpnp_pon_is_lpk(void)
 	if (reg & 0x80)
 		return 1;
 
-	dev_info(&pon->pdev->dev,
+	dev_info(pon->dev,
 			"hw_reset reason1 is 0x%x\n",
 			reg);
 
 	rc = regmap_read(pon->regmap, QPNP_POFF_REASON2(pon), &reg);
 
-	dev_info(&pon->pdev->dev,
+	dev_info(pon->dev,
 			"hw_reset reason2 is 0x%x\n",
 			reg);
 	return 0;
