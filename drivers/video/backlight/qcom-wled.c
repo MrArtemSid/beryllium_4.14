@@ -15,6 +15,7 @@
 #include <linux/ktime.h>
 #include <linux/kernel.h>
 #include <linux/backlight.h>
+#include <linux/leds.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -982,6 +983,39 @@ static u32 wled_values(const struct wled_var_cfg *cfg, u32 idx)
 		return cfg->values[idx];
 	return idx;
 }
+
+int qpnp_wled_cabc(struct backlight_device *bl, bool enable)
+{
+	struct wled *wled;
+	int rc = 0, i;
+	u8 reg = 0, mask;
+
+	wled = bl_get_data(bl);
+	if (wled == NULL) {
+		pr_err("wled is null\n");
+		return -EPERM;
+	}
+
+	mutex_lock(&wled->lock);
+	wled->cfg.cabc = enable;
+	for (i = 0; i < wled->cfg.num_strings; i++) {
+
+		/* CABC */
+		reg = wled->cfg.cabc ? (1  << 7) : 0;
+		mask = 0x80;
+		rc = regmap_update_bits(wled->regmap, wled->sink_addr + WLED4_SINK_REG_STR_CABC(i), mask, reg);
+		if (rc < 0)
+			goto fail_cabc;
+
+		pr_debug("%d cabc %d\n", i, wled->cfg.cabc);
+	}
+fail_cabc:
+	mutex_unlock(&wled->lock);
+
+	return rc;
+}
+
+EXPORT_SYMBOL_GPL(qpnp_wled_cabc);
 
 static int wled_configure(struct wled *wled, int version)
 {
