@@ -314,6 +314,8 @@ struct regulator;
  * @skip_handoff: do not vote for the max possible voltage during init
  * @cur_level: the currently set voltage level
  * @lock: lock to protect this struct
+ * @use_max_uV: use INT_MAX for max_uV when calling regulator_set_voltage
+ *           This is useful when different vdd_class share same regulator.
  */
 struct clk_vdd_class {
 	const char *class_name;
@@ -326,6 +328,7 @@ struct clk_vdd_class {
 	bool skip_handoff;
 	unsigned long cur_level;
 	struct mutex lock;
+	bool use_max_uV;
 };
 
 #define DEFINE_VDD_CLASS(_name, _set_vdd, _num_levels) \
