@@ -926,4 +926,3 @@
 	};
 
 };
-#include "msm8996-pins.dtsi"
