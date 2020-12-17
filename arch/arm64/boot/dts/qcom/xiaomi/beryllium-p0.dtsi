@@ -23,15 +23,17 @@
 #include "../smb1355.dtsi"
 };
 
+/*
 &removed_region {
 	reg = <0 0x85fc0000 0 0x4940000>;
 };
+*/
 
 &qcom_seecom {
 	reg = <0x86d00000 0x03C00000>;
 };
 
-&reserved_memory {
+&reserved_mem {
 		ramdump_fb_mem: ramdump_fb_region@af000000 {
 			compatible = "removed-dma-pool";
 			no-map;
@@ -358,7 +360,8 @@
 	qcom,battery-data = <&mtp_batterydata>;
 };
 
-&pmi8998_pwm_1 {
+/*
+&pmi8998_pwms {
 	status = "okay";
 	qcom,period = <25000>;
 
@@ -367,16 +370,13 @@
 		qcom,duty = <2500>;
 	};
 };
+*/
 
-&smb1355_charger_0 {
+&smb1355_charger {
 	status = "ok";
 	qcom,enable-ctm;
 };
 
-&smb1355_charger_1 {
-	status = "ok";
-	qcom,enable-ctm;
-};
 
 &qupv3_se9_2uart {
 	status = "ok";
@@ -448,6 +448,7 @@
 };
 */
 
+/*
 &qupv3_se10_i2c {
 	status = "ok";
 
@@ -468,6 +469,7 @@
 		lm3644,duty-us = <2500>;
 	};
 };
+*/
 
 &qupv3_se14_i2c {
 	status = "ok";
