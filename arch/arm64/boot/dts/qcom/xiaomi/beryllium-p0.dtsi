@@ -115,8 +115,8 @@
 	};
 };
 
-&removed_region {
-	reg = <0 0x85fc0000 0 0x4940000>;
+&removed_region2 {
+	reg = <0 0x86200000 0 0x4700000>;
 };
 
 &qcom_seecom {
