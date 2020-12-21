@@ -610,10 +610,10 @@
 			pmi8998_torch0: qcom,torch_0 {
 				label = "torch";
 				qcom,led-name = "led:torch_0";
-				qcom,max-current = <300>;
+				qcom,max-current = <500>;
 				qcom,default-led-trigger = "torch0_trigger";
 				qcom,id = <0>;
-				qcom,current-ma = <75>;
+				qcom,current-ma = <300>;
 				qcom,ires-ua = <12500>;
 				qcom,hdrm-voltage-mv = <325>;
 				qcom,hdrm-vol-hi-lo-win-mv = <100>;
@@ -622,10 +622,10 @@
 			pmi8998_torch1: qcom,torch_1 {
 				label = "torch";
 				qcom,led-name = "led:torch_1";
-				qcom,max-current = <300>;
+				qcom,max-current = <500>;
 				qcom,default-led-trigger = "torch1_trigger";
 				qcom,id = <1>;
-				qcom,current-ma = <75>;
+				qcom,current-ma = <300>;
 				qcom,ires-ua = <12500>;
 				qcom,hdrm-voltage-mv = <325>;
 				qcom,hdrm-vol-hi-lo-win-mv = <100>;
