@@ -300,7 +300,7 @@
 
 &mdss_mdp {
 	#cooling-cells = <2>;
-	connectors = <&sde_rscc &sde_wb>;
+	connectors = <&sde_rscc &sde_wb &sde_dsi>;
 };
 
 &pm8998_l28{
