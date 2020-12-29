@@ -30,6 +30,7 @@
 			vendor {
 				fsmgr_flags = "wait";
 			};
+			/delete-node/ odm;
 		};
 	};
 };
