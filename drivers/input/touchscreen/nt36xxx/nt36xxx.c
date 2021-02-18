@@ -15,6 +15,7 @@
  * more details.
  *
  */
+#include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -131,38 +132,34 @@ return:
 int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, uint16_t len)
 {
 	struct i2c_msg msgs[2];
-	int32_t ret = -1;
-	int32_t retries = 0;
+	int32_t ret = -EIO;
+	int32_t retries;
 
-	mutex_lock(&ts->xbuf_lock);
+	char *dma = kmalloc(len, GFP_KERNEL | GFP_DMA);
 
 	msgs[0].flags = !I2C_M_RD;
 	msgs[0].addr  = address;
 	msgs[0].len   = 1;
-	msgs[0].buf   = &buf[0];
+	msgs[0].buf   = dma;
 
 	msgs[1].flags = I2C_M_RD;
 	msgs[1].addr  = address;
 	msgs[1].len   = len - 1;
-	msgs[1].buf   = ts->xbuf;
+	msgs[1].buf   = dma + 1;
 
-	while (retries < 5) {
+	for (retries = 0; retries < 5; retries++) {
 		ret = i2c_transfer(client->adapter, msgs, 2);
-		if (ret == 2)	break;
-		retries++;
+		if (likely(ret == 2))
+			goto out;
+
 		msleep(20);
-		NVT_ERR("error, retry=%d\n", retries);
 	}
 
-	if (unlikely(retries == 5)) {
-		NVT_ERR("error, ret=%d\n", ret);
-		ret = -EIO;
-	}
+	NVT_ERR("i2c read error\n");
 
-	memcpy(buf + 1, ts->xbuf, len - 1);
-
-	mutex_unlock(&ts->xbuf_lock);
-
+out:
+	memcpy(buf, dma, len);
+	kfree(dma);
 	return ret;
 }
 
@@ -176,32 +173,28 @@ return:
 int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf, uint16_t len)
 {
 	struct i2c_msg msg;
-	int32_t ret = -1;
-	int32_t retries = 0;
+	int32_t ret = -EIO;
+	int32_t retries;
 
-	mutex_lock(&ts->xbuf_lock);
+	char *dma = kmalloc(len, GFP_KERNEL | GFP_DMA);
+	memcpy(dma, buf, len);
 
 	msg.flags = !I2C_M_RD;
 	msg.addr  = address;
 	msg.len   = len;
-	memcpy(ts->xbuf, buf, len);
-	msg.buf   = ts->xbuf;
+	msg.buf   = dma;
 
-	while (retries < 5) {
+	for (retries = 0; retries < 5; retries++) {
 		ret = i2c_transfer(client->adapter, &msg, 1);
-		if (ret == 1)	break;
-		retries++;
+		if (likely(ret == 1))
+			goto out;
+
 		msleep(20);
-		NVT_ERR("error, retry=%d\n", retries);
 	}
 
-	if (unlikely(retries == 5)) {
-		NVT_ERR("error, ret=%d\n", ret);
-		ret = -EIO;
-	}
-
-	mutex_unlock(&ts->xbuf_lock);
-
+	NVT_ERR("i2c write error\n");
+out:
+	kfree(dma);
 	return ret;
 }
 
