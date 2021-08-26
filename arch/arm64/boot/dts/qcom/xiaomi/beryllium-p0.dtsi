@@ -268,9 +268,9 @@
 &pmi8998_wled {
 	linux,name = "wled";
 	status = "okay";
-	qcom,current-limit-microamp = <20000>;
-	qcom,enabled-strings = <0 1>;
-	qcom,ovp-millivolt = <29600>;
+	qcom,fs-current-limit = <20000>;
+	qcom,string-cfg = <5>;
+	qcom,ovp = <29600>;
 	qcom,en-cabc;
 	qcom,switching-freq = <600>;
 };
