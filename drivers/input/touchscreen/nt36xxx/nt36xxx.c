@@ -1433,9 +1433,7 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 			if (i == NVT_ID_BYTE_MAX) {
 				found_nvt_chip = 1;
 			}
-#ifdef CONFIG_MACH_XIAOMI_E10
-			found_nvt_chip = 1;
-#endif
+
 			if (found_nvt_chip) {
 				NVT_LOG("This is NVT touch IC\n");
 				ts->mmap = trim_id_table[list].mmap;
