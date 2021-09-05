@@ -6,7 +6,7 @@
 #include <linux/hwinfo.h>
 #include <linux/cpu.h>
 #include <soc/qcom/socinfo.h>
-#include <soc/qcom/smem.h>
+#include <linux/soc/qcom/smem.h>
 
 /* Raw data of DDR manufacturer id(MR5) */
 #define HWINFO_DDRID_SAMSUNG	0x01
@@ -15,6 +15,7 @@
 #define HWINFO_DDRID_MICRON	0xFF
 #define HWINFO_DDRID_NANYA	0x05
 #define HWINFO_DDRID_INTEL	0x0E
+#define	SMEM_ID_VENDOR2		136
 
 struct {
 	unsigned int touch_info:4;
@@ -224,11 +225,10 @@ unsigned int get_hardware_info(unsigned int type)
 
 static int hwinfo_get_ddr_info_from_smem(void)
 {
-	unsigned size;
+	size_t size;
 	uint32_t *ddr_table_ptr;
 
-	ddr_table_ptr = smem_get_entry(SMEM_ID_VENDOR2, &size, 0,
-			SMEM_ANY_HOST_FLAG);
+	ddr_table_ptr = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_ID_VENDOR2, &size);
 	if (IS_ERR(ddr_table_ptr)) {
 		pr_err("Error fetching DDR manufacturer id from SMEM!\n");
 		hw_info.ddr_info = 0;
