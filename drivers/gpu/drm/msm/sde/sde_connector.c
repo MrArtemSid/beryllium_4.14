@@ -2045,14 +2045,7 @@ static irqreturn_t esd_err_irq_handle(int irq, void *data)
 	SDE_ERROR("esd check irq report PANEL_DEAD conn_id: %d enc_id: %d, panel_status[%d]\n",
 		c_conn->base.base.id, c_conn->encoder->base.id, panel_on);
 
-	if (panel_on) {
-		c_conn->panel_dead = true;
-		event.type = DRM_EVENT_PANEL_DEAD;
-		event.length = sizeof(bool);
-		msm_mode_object_event_notify(&c_conn->base.base,
-			c_conn->base.dev, &event, (u8 *)&c_conn->panel_dead);
-		sde_encoder_display_failure_notification(c_conn->encoder);
-	}
+	_sde_connector_report_panel_dead(c_conn, false);
 	return IRQ_HANDLED;
 }
 

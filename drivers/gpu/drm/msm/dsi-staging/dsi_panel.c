@@ -18,6 +18,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <video/mipi_display.h>
+#include <linux/leds.h>
 
 #include "dsi_panel.h"
 #include "dsi_display.h"
@@ -373,7 +374,7 @@ static int dsi_panel_gpio_release(struct dsi_panel *panel)
  void drm_dsi_ulps_enable(bool enable)
 {
 	if (g_panel) {
-		g_panel->ulps_enabled = enable;
+		g_panel->ulps_feature_enabled = enable;
 		g_panel->ulps_suspend_enabled = enable;
 	}
 }
@@ -850,17 +851,10 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	return rc;
 }
 
-static void dsi_panel_wled_cabc_ctrl(struct led_trigger *trig, bool enable)
+extern int qpnp_wled_cabc(struct backlight_device *bl, bool enable);
+static void dsi_panel_wled_cabc_ctrl(struct dsi_backlight_config *bl, bool enable)
 {
-	struct led_classdev *led_cdev;
-
-	if (!trig)
-		return;
-
-	//read_lock(&trig->leddev_list_lock);
-	list_for_each_entry(led_cdev, &trig->led_cdevs, trig_list)
-		qpnp_wled_cabc(led_cdev, enable);
-	//read_unlock(&trig->leddev_list_lock);
+	qpnp_wled_cabc(bl->raw_bd, enable);
 }
 
 static void dsi_panel_offon_mode_control(struct dsi_panel *panel, u32 bl_lvl)
@@ -886,15 +880,15 @@ static void dsi_panel_offon_mode_control(struct dsi_panel *panel, u32 bl_lvl)
 					ret = panel_disp_param_send_lock(panel, 0x10000000);
 
 					if (ret > 0 && panel->last_bl_lvl * panel->brightness_cmds.rbuf[0] >= 255)
-						led_trigger_event(bl->wled, panel->last_bl_lvl * panel->brightness_cmds.rbuf[0] / 255);
+						backlight_device_set_brightness(bl->raw_bd, panel->last_bl_lvl * panel->brightness_cmds.rbuf[0] / 255);
 
-					dsi_panel_wled_cabc_ctrl(bl->wled, 0);
+					dsi_panel_wled_cabc_ctrl(bl, 0);
 				}
 
 				panel_disp_param_send_lock(panel, DISPLAY_OFF_MODE);
 
 				if (panel->disable_cabc)
-					dsi_panel_wled_cabc_ctrl(bl->wled, 1);
+					dsi_panel_wled_cabc_ctrl(bl, 1);
 			}
 		}
 	} else {
@@ -2639,6 +2633,7 @@ static int dsi_panel_parse_power_cfg(struct dsi_panel *panel)
 {
 	int rc = 0;
 	char *supply_name;
+	struct dsi_parser_utils *utils = &panel->utils;
 
 	if (panel->host_config.ext_bridge_num)
 		return 0;
@@ -2647,8 +2642,8 @@ static int dsi_panel_parse_power_cfg(struct dsi_panel *panel)
 		supply_name = "qcom,panel-supply-entries";
 	else
 		supply_name = "qcom,panel-sec-supply-entries";
-	
-	panel->lp11_init = of_property_read_bool(of_node,
+
+	panel->lp11_init = utils->read_bool(utils->data,
 				"qcom,mdss-dsi-lp11-init");
 	pr_debug("%s: lp11_init = %d\n", __func__, panel->lp11_init);
 	
@@ -2835,19 +2830,8 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 		panel->bl_config.bl_update = BL_UPDATE_NONE;
 	}
 	
-	panel->bl_config.dcs_type_ss = of_property_read_bool(of_node,
+	panel->bl_config.dcs_type_ss = utils->read_bool(utils->data,
 						"qcom,mdss-dsi-bl-dcs-type-ss");
-
-	data = of_get_property(of_node, "qcom,bl-update-flag", NULL);
-	if (!data) {
-		panel->bl_config.bl_update = BL_UPDATE_NONE;
-	} else if (!strcmp(data, "delay_until_first_frame")) {
-		panel->bl_config.bl_update = BL_UPDATE_DELAY_UNTIL_FIRST_FRAME;
-	} else {
-		pr_debug("[%s] No valid bl-update-flag: %s\n",
-						panel->name, data);
-		panel->bl_config.bl_update = BL_UPDATE_NONE;
-	}
 
 	panel->bl_config.bl_scale = MAX_BL_SCALE_LEVEL;
 	panel->bl_config.bl_scale_ad = MAX_AD_BL_SCALE_LEVEL;
@@ -3714,8 +3698,8 @@ static int dsi_panel_parse_esd_config(struct dsi_panel *panel)
 		"qcom,esd-check-enabled");
 	
 	/* esd-err-flag method will be prefered */
-	esd_config->esd_err_irq_gpio = of_get_named_gpio_flags(
-			of_node,
+	esd_config->esd_err_irq_gpio = utils->get_named_gpio_flags(
+			utils->data,
 			"qcom,esd-err-irq-gpio",
 			0,
 			(enum of_gpio_flags *)&(esd_config->esd_err_irq_flags));
@@ -3825,7 +3809,7 @@ static void panelon_dimming_enable_delayed_work(struct work_struct *work)
 #define MAX_LUMINANCE_NUM    2
 #define MAX_LUMINANCE_VALID_NUM    2
 static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
-				     struct device_node *of_node)
+				     struct dsi_parser_utils *utils)
 {
 	bool dispparam_enabled = 0;
 	int rc = 0;
@@ -3838,8 +3822,8 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 	if (panel == NULL)
 		return -EINVAL;
 
-	dispparam_enabled = of_property_read_bool(of_node,
-							"qcom,dispparam-enabled");
+	dispparam_enabled = utils->read_bool(utils->data,
+				"qcom,dispparam-enabled");
 	if (dispparam_enabled){
 		pr_info("[LCD]%s:%d Dispparam enabled.\n", __func__, __LINE__);
 		panel->dispparam_enabled = true;
@@ -3848,7 +3832,7 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 		panel->dispparam_enabled = false;
 	}
 
-	rc = of_property_read_u32_array(of_node,
+	rc = utils->read_u32_array(utils->data,
 		"qcom,mdss-dsi-panel-xy-coordinate",
 		xy_coordinate, XY_COORDINATE_NUM);
 
@@ -3864,7 +3848,7 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 	pr_info("0x%x 0x%x enabled:%d\n",
 		xy_coordinate[0], xy_coordinate[1], panel->xy_coordinate_cmds.enabled);
 
-	rc = of_property_read_u32_array(of_node,
+	rc = utils->read_u32_array(utils->data,
 		"qcom,mdss-dsi-panel-max-luminance",
 		max_luminance, MAX_LUMINANCE_NUM);
 
@@ -3880,7 +3864,7 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 	pr_info("0x%x 0x%x enabled:%d\n",
 		max_luminance[0], max_luminance[1], panel->max_luminance_cmds.enabled);
 
-	rc = of_property_read_u32_array(of_node,
+	rc = utils->read_u32_array(utils->data,
 			"qcom,mdss-dsi-panel-max-luminance-valid",
 			max_luminance_valid, MAX_LUMINANCE_VALID_NUM);
 
@@ -3893,7 +3877,7 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 		panel->max_luminance_valid_cmds.valid_bits = max_luminance_valid[1];
 		panel->max_luminance_valid_cmds.enabled = true;
 	}
-	rc = of_property_read_u32_array(of_node,
+	rc = utils->read_u32_array(utils->data,
 		"qcom,mdss-dsi-panel-bl-info",
 		panel_bl_info, PANEL_BL_INFO_NUM);
 	if (rc) {
@@ -3906,16 +3890,16 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 		}
 	}
 
-	panel->onoff_mode_enabled = of_property_read_bool(of_node,
+	panel->onoff_mode_enabled = utils->read_bool(utils->data,
 		"qcom,disp-panel-offon-mode-enabled");
 
-	panel->disable_cabc = of_property_read_bool(of_node,
+	panel->disable_cabc = utils->read_bool(utils->data,
 		"qcom,disp-paneloff-disablecabc-enabled");
 
-	panel->off_keep_reset = of_property_read_bool(of_node,
+	panel->off_keep_reset = utils->read_bool(utils->data,
 		"qcom,mdss-panel-off-keep-reset");
 
-	rc = of_property_read_u32(of_node,
+	rc = utils->read_u32(utils->data,
 		"qcom,mdss-panel-on-dimming-delay", &panel->panel_on_dimming_delay);
 	if (rc) {
 		panel->panel_on_dimming_delay = 0;
@@ -3924,7 +3908,7 @@ static int dsi_panel_parse_mi_config(struct dsi_panel *panel,
 		pr_info("Panel on dimming delay %d ms\n", panel->panel_on_dimming_delay);
 	}
 
-	rc = of_property_read_u32(of_node,
+	rc = utils->read_u32(utils->data,
 			"qcom,disp-doze-backlight-threshold", &panel->doze_backlight_threshold);
 	if (rc) {
 		panel->doze_backlight_threshold = DOZE_MIN_BRIGHTNESS_LEVEL;
@@ -4067,7 +4051,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		pr_err("failed to parse panel specific, rc=%d\n", rc);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	
-	rc = dsi_panel_parse_mi_config(panel, of_node);
+	rc = dsi_panel_parse_mi_config(panel, utils);
 	if (rc)
 		pr_err("failed to parse mi config, rc=%d\n", rc);
 
