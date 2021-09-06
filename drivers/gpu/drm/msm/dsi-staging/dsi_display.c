@@ -1145,22 +1145,10 @@ int dsi_display_set_power(struct drm_connector *connector,
 	case SDE_MODE_DPMS_LP2:
 		rc = dsi_panel_set_lp2(display->panel);
 		break;
-	case SDE_MODE_DPMS_ON:
-		if (display->panel->power_mode == SDE_MODE_DPMS_LP1 ||
-			display->panel->power_mode == SDE_MODE_DPMS_LP2)
-			rc = dsi_panel_set_nolp(display->panel);
-		break;
-	case SDE_MODE_DPMS_OFF:
 	default:
-		return rc;
+		rc = dsi_panel_set_nolp(display->panel);
+		break;
 	}
-
-	pr_debug("Power mode transition from %d to %d %s",
-		 display->panel->power_mode, power_mode,
-		 rc ? "failed" : "successful");
-	if (!rc)
-		display->panel->power_mode = power_mode;
-
 	return rc;
 }
 
