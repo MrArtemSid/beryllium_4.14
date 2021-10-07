@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -41,7 +41,6 @@
 #define F_SLEW(f, s, h, m, n, sf) { (f), (s), (2 * (h) - 1), (m), (n), (sf) }
 
 static DEFINE_VDD_REGULATORS(vdd_cx, VDD_NUM, 1, vdd_corner);
-static DEFINE_VDD_REGULATORS(vdd_sr_pll, VDD_SR_PLL_NUM, 1, vdd_sr_levels);
 
 enum {
 	P_CORE_BI_PLL_TEST_SE,
@@ -413,11 +412,6 @@ static struct clk_pll gpll6 = {
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_pll_ops,
-		.vdd_class = &vdd_sr_pll,
-		.rate_max = (unsigned long [VDD_SR_PLL_NUM]) {
-			[VDD_SR_PLL_SVS] = 1080000000,
-		},
-		.num_rate_max = VDD_SR_PLL_NUM,
 	},
 };
 
@@ -853,9 +847,7 @@ static struct clk_rcg2 byte0_clk_src = {
 };
 
 static const struct freq_tbl ftbl_emac_clk_src[] = {
-	F(2500000,   P_GPLL1_OUT_MAIN, 4, 1, 50),
 	F(5000000,   P_GPLL1_OUT_MAIN, 2, 1, 50),
-	F(25000000,  P_GPLL1_OUT_MAIN, 1, 1, 20),
 	F(50000000,  P_GPLL1_OUT_MAIN, 10, 0, 0),
 	F(125000000, P_GPLL1_OUT_MAIN, 4, 0, 0),
 	F(250000000, P_GPLL1_OUT_MAIN, 2, 0, 0),
@@ -1409,46 +1401,6 @@ static struct clk_rcg2 vsync_clk_src = {
 	},
 };
 
-static struct clk_branch gcc_bias_pll_misc_reset_clk  = {
-	.halt_reg = 0x3c004,
-	.halt_check = BRANCH_HALT_SKIP,
-	.clkr = {
-		.enable_reg = 0x3c004,
-		.enable_is_inverted = true,
-		.enable_mask = BIT(0),
-		.hw.init = &(struct clk_init_data){
-			.name = "gcc_bias_pll_misc_reset_clk",
-			.ops = &clk_branch2_ops,
-		},
-	},
-};
-
-static struct clk_branch gcc_bias_pll_ahb_clk = {
-	.halt_reg = 0x3c008,
-	.halt_check = BRANCH_HALT,
-	.clkr = {
-		.enable_reg = 0x3c008,
-		.enable_mask = BIT(0),
-		.hw.init = &(struct clk_init_data){
-			.name = "gcc_bias_pll_ahb_clk",
-			.ops = &clk_branch2_ops,
-		},
-	},
-};
-
-static struct clk_branch gcc_bias_pll_aon_clk = {
-	.halt_reg = 0x3c00c,
-	.halt_check = BRANCH_HALT_DELAY,
-	.clkr = {
-		.enable_reg = 0x3c00c,
-		.enable_mask = BIT(0),
-		.hw.init = &(struct clk_init_data){
-			.name = "gcc_bias_pll_aon_clk",
-			.ops = &clk_branch2_ops,
-		},
-	},
-};
-
 static struct clk_branch gcc_apss_ahb_clk = {
 	.halt_reg = 0x4601c,
 	.halt_check = BRANCH_HALT_VOTED,
@@ -1531,6 +1483,32 @@ static struct clk_branch gcc_blsp1_ahb_clk = {
 		.enable_mask = BIT(10),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_blsp1_ahb_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_dcc_clk = {
+	.halt_reg = 0x77004,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x77004,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_dcc_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_dcc_xo_clk = {
+	.halt_reg = 0x77008,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x77008,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_dcc_xo_clk",
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2895,9 +2873,8 @@ static struct clk_regmap *gcc_qcs405_clocks[] = {
 	[GCC_CRYPTO_CLK] = &gcc_crypto_clk.clkr,
 	[GCC_MDP_TBU_CLK] = &gcc_mdp_tbu_clk.clkr,
 	[GCC_QDSS_DAP_CLK] = &gcc_qdss_dap_clk.clkr,
-	[GCC_BIAS_PLL_MISC_RESET_CLK] = &gcc_bias_pll_misc_reset_clk.clkr,
-	[GCC_BIAS_PLL_AHB_CLK] = &gcc_bias_pll_ahb_clk.clkr,
-	[GCC_BIAS_PLL_AON_CLK] = &gcc_bias_pll_aon_clk.clkr,
+	[GCC_DCC_CLK] = &gcc_dcc_clk.clkr,
+	[GCC_DCC_XO_CLK] = &gcc_dcc_xo_clk.clkr,
 };
 
 static const struct qcom_reset_map gcc_qcs405_resets[] = {
@@ -2915,7 +2892,6 @@ static const struct qcom_reset_map gcc_qcs405_resets[] = {
 	[GCC_PCIE_0_LINK_DOWN_BCR] = {0x3E038},
 	[GCC_PCIEPHY_0_PHY_BCR] = {0x3E03C},
 	[GCC_EMAC_BCR] = {0x4E000},
-	[GCC_BIAS_PLL_BCR] = {0x3C000},
 };
 
 static const struct regmap_config gcc_qcs405_regmap_config = {
@@ -2963,14 +2939,6 @@ static int gcc_qcs405_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"Unable to get vdd_cx regulator\n");
 		return PTR_ERR(vdd_cx.regulator[0]);
-	}
-
-	vdd_sr_pll.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_sr_pll");
-	if (IS_ERR(vdd_sr_pll.regulator[0])) {
-		if (!(PTR_ERR(vdd_sr_pll.regulator[0]) == -EPROBE_DEFER))
-			dev_err(&pdev->dev,
-				"Unable to get vdd_sr_pll regulator\n");
-		return PTR_ERR(vdd_sr_pll.regulator[0]);
 	}
 
 	clk_alpha_pll_configure(&gpll3_out_main, regmap, &gpll3_config);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,10 +16,11 @@
 
 /* Hardware/Dummy/Voter clocks */
 #define GCC_XO					0
-#define GCC_GPLL0_EARLY_DIV			1
-#define GCC_GPLL1_EARLY_DIV			2
-#define GCC_CE1_AHB_M_CLK			3
-#define GCC_CE1_AXI_M_CLK			4
+#define GCC_FAKE_BI_TCXO			1
+#define GCC_GPLL0_EARLY_DIV			2
+#define GCC_GPLL1_EARLY_DIV			3
+#define GCC_CE1_AHB_M_CLK			4
+#define GCC_CE1_AXI_M_CLK			5
 
 /* RCGs and Branches */
 #define BLSP1_QUP1_I2C_APPS_CLK_SRC		10
@@ -194,14 +195,14 @@
 #define HLOS2_VOTE_TURING_ADSP_SMMU_CLK		184
 
 /* Block resets */
-#define GCC_QUSB2PHY_PRIM_BCR			0
-#define GCC_QUSB2PHY_SEC_BCR			1
-#define GCC_UFS_BCR				2
-#define GCC_USB3_DP_PHY_BCR			3
-#define GCC_USB3_PHY_BCR			4
-#define GCC_USB3PHY_PHY_BCR			5
-#define GCC_USB_20_BCR				6
-#define GCC_USB_30_BCR				7
-#define GCC_USB_PHY_CFG_AHB2PHY_BCR		8
+#define GCC_QUSB2PHY_PRIM_BCR                    0
+#define GCC_QUSB2PHY_SEC_BCR                     1
+#define GCC_UFS_BCR                              2
+#define GCC_USB3_DP_PHY_BCR                      3
+#define GCC_USB3_PHY_BCR                         4
+#define GCC_USB3PHY_PHY_BCR                      5
+#define GCC_USB_20_BCR                           6
+#define GCC_USB_30_BCR                           7
+#define GCC_USB_PHY_CFG_AHB2PHY_BCR              8
 
 #endif

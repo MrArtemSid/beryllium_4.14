@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -85,7 +85,7 @@ static struct pll_vco video_cc_pll_vco[] = {
 };
 
 /* 600MHz configuration */
-static struct alpha_pll_config video_pll0_config = {
+static const struct alpha_pll_config video_pll0_config = {
 	.l = 0x1F,
 	.alpha_u = 0x40,
 	.alpha = 0x00,
@@ -94,7 +94,6 @@ static struct alpha_pll_config video_pll0_config = {
 	.vco_mask = 0x3 << 20,
 	.main_output_mask = BIT(0),
 	.config_ctl_val = 0x4001055b,
-	.test_ctl_hi_val = 0x1,
 	.test_ctl_hi_mask = 0x1,
 };
 
@@ -103,13 +102,12 @@ static struct clk_alpha_pll video_pll0_out_main = {
 	.vco_table = video_cc_pll_vco,
 	.num_vco = ARRAY_SIZE(video_cc_pll_vco),
 	.flags = SUPPORTS_DYNAMIC_UPDATE,
-	.config = &video_pll0_config,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "video_pll0_out_main",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_slew_ops,
+			.ops = &clk_alpha_pll_ops,
 			.vdd_class = &vdd_cx,
 			.num_rate_max = VDD_NUM,
 			.rate_max = (unsigned long[VDD_NUM]) {
@@ -326,45 +324,16 @@ static const struct qcom_cc_desc video_cc_sm6150_desc = {
 	.num_clks = ARRAY_SIZE(video_cc_sm6150_clocks),
 };
 
-static struct clk_regmap *video_cc_sm6150_critical_clocks[] = {
-	&video_cc_xo_clk.clkr,
-};
-
-static const struct qcom_cc_critical_desc video_cc_sm6150_critical_desc = {
-	.clks = video_cc_sm6150_critical_clocks,
-	.num_clks = ARRAY_SIZE(video_cc_sm6150_critical_clocks),
-};
-
 static const struct of_device_id video_cc_sm6150_match_table[] = {
 	{ .compatible = "qcom,videocc-sm6150" },
-	{ .compatible = "qcom,videocc-sa6155" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, video_cc_sm6150_match_table);
-
-static int video_cc_sa6150_resume(struct device *dev)
-{
-	return qcom_cc_enable_critical_clks(&video_cc_sm6150_critical_desc);
-}
-
-static const struct dev_pm_ops video_cc_sa6150_pm_ops = {
-	.restore_early = video_cc_sa6150_resume,
-};
-
-
-static void videocc_sm6150_fixup_sa6155(struct platform_device *pdev)
-{
-	vdd_cx.num_levels = VDD_NUM_SA6155;
-	vdd_cx.cur_level = VDD_NUM_SA6155;
-
-	pdev->dev.driver->pm =  &video_cc_sa6150_pm_ops;
-}
 
 static int video_cc_sm6150_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
 	int ret = 0;
-	int is_sa6155;
 
 	vdd_cx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_cx");
 	if (IS_ERR(vdd_cx.regulator[0])) {
@@ -374,11 +343,6 @@ static int video_cc_sm6150_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_cx.regulator[0]);
 	}
 
-	is_sa6155 = of_device_is_compatible(pdev->dev.of_node,
-						"qcom,videocc-sa6155");
-	if (is_sa6155)
-		videocc_sm6150_fixup_sa6155(pdev);
-
 	regmap = qcom_cc_map(pdev, &video_cc_sm6150_desc);
 	if (IS_ERR(regmap)) {
 		pr_err("Failed to map the video_cc registers\n");
@@ -386,7 +350,7 @@ static int video_cc_sm6150_probe(struct platform_device *pdev)
 	}
 
 	clk_alpha_pll_configure(&video_pll0_out_main, regmap,
-					video_pll0_out_main.config);
+						&video_pll0_config);
 
 	ret = qcom_cc_really_probe(pdev, &video_cc_sm6150_desc, regmap);
 	if (ret) {

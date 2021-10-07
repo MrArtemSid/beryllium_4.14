@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,9 +37,17 @@
 #define PWR_ON_MASK		BIT(31)
 #define CLK_DIS_WAIT_MASK	(0xF << 12)
 #define CLK_DIS_WAIT_SHIFT	(12)
+#define EN_FEW_WAIT_MASK	(0xF << 16)
+#define EN_FEW_WAIT_SHIFT	(16)
+#define EN_REST_WAIT_MASK	(0xF << 20)
+#define EN_REST_WAIT_SHIFT	(20)
 #define SW_OVERRIDE_MASK	BIT(2)
 #define HW_CONTROL_MASK		BIT(1)
 #define SW_COLLAPSE_MASK	BIT(0)
+
+/* CFG_GDSCR */
+#define GDSC_POWER_UP_COMPLETE		BIT(16)
+#define GDSC_POWER_DOWN_COMPLETE	BIT(15)
 
 /* Domain Address */
 #define GMEM_CLAMP_IO_MASK	BIT(0)
@@ -50,6 +58,7 @@
 
 /* Register Offset */
 #define REG_OFFSET		0x0
+#define CFG_GDSCR_OFFSET	0x4
 
 /* Timeout Delay */
 #define TIMEOUT_US		100
@@ -83,12 +92,12 @@ struct gdsc {
 	bool			is_gdsc_enabled;
 	bool			allow_clear;
 	bool			reset_aon;
+	bool			poll_cfg_gdscr;
 	bool			is_bus_enabled;
 	int			clock_count;
 	int			reset_count;
 	int			root_clk_idx;
 	u32			gds_timeout;
-	bool			skip_disable_before_enable;
 };
 
 enum gdscr_status {
@@ -150,6 +159,31 @@ static int poll_gdsc_status(struct gdsc *sc, enum gdscr_status status)
 	return -ETIMEDOUT;
 }
 
+static int poll_cfg_gdsc_status(struct gdsc *sc, enum gdscr_status status)
+{
+	struct regmap *regmap = sc->regmap;
+	int count = sc->gds_timeout;
+	u32 val;
+
+	for (; count > 0; count--) {
+		regmap_read(regmap, CFG_GDSCR_OFFSET, &val);
+
+		switch (status) {
+		case ENABLED:
+			if (val & GDSC_POWER_UP_COMPLETE)
+				return 0;
+			break;
+		case DISABLED:
+			if (val & GDSC_POWER_DOWN_COMPLETE)
+				return 0;
+			break;
+		}
+		udelay(1);
+	}
+
+	return -ETIMEDOUT;
+}
+
 static int gdsc_is_enabled(struct regulator_dev *rdev)
 {
 	struct gdsc *sc = rdev_get_drvdata(rdev);
@@ -166,9 +200,6 @@ static int gdsc_is_enabled(struct regulator_dev *rdev)
 
 	if (!sc->toggle_logic)
 		return !sc->resets_asserted;
-
-	if (sc->skip_disable_before_enable)
-		return false;
 
 	if (sc->parent_regulator) {
 		/*
@@ -259,11 +290,8 @@ static int gdsc_qmp_enable(struct gdsc *sc)
 static int gdsc_enable(struct regulator_dev *rdev)
 {
 	struct gdsc *sc = rdev_get_drvdata(rdev);
-	uint32_t regval, hw_ctrl_regval = 0x0;
+	uint32_t regval, cfg_regval, hw_ctrl_regval = 0x0;
 	int i, ret = 0;
-
-	if (sc->skip_disable_before_enable)
-		return 0;
 
 	if (sc->parent_regulator) {
 		ret = regulator_set_voltage(sc->parent_regulator,
@@ -359,7 +387,10 @@ static int gdsc_enable(struct regulator_dev *rdev)
 		gdsc_mb(sc);
 		udelay(1);
 
-		ret = poll_gdsc_status(sc, ENABLED);
+		if (sc->poll_cfg_gdscr)
+			ret = poll_cfg_gdsc_status(sc, ENABLED);
+		else
+			ret = poll_gdsc_status(sc, ENABLED);
 		if (ret) {
 			regmap_read(sc->regmap, REG_OFFSET, &regval);
 
@@ -387,10 +418,20 @@ static int gdsc_enable(struct regulator_dev *rdev)
 					regval);
 				udelay(sc->gds_timeout);
 
-				regmap_read(sc->regmap, REG_OFFSET, &regval);
-				dev_err(&rdev->dev, "%s final state: 0x%x (%d us after timeout)\n",
-					sc->rdesc.name, regval,
-					sc->gds_timeout);
+				if (sc->poll_cfg_gdscr) {
+					regmap_read(sc->regmap, REG_OFFSET,
+							&regval);
+					regmap_read(sc->regmap,
+						CFG_GDSCR_OFFSET, &cfg_regval);
+					dev_err(&rdev->dev, "%s final state: gdscr - 0x%x, cfg_gdscr - 0x%x (%d us after timeout)\n",
+						sc->rdesc.name, regval,
+						cfg_regval, sc->gds_timeout);
+				} else {
+					regmap_read(sc->regmap, REG_OFFSET, &regval);
+					dev_err(&rdev->dev, "%s final state: 0x%x (%d us after timeout)\n",
+						sc->rdesc.name, regval,
+						sc->gds_timeout);
+				}
 				goto end;
 			}
 		}
@@ -429,8 +470,6 @@ end:
 		msm_bus_scale_client_update_request(sc->bus_handle, 0);
 		sc->is_bus_enabled = false;
 	}
-
-	sc->skip_disable_before_enable = false;
 
 	if (ret && sc->parent_regulator)
 		regulator_set_voltage(sc->parent_regulator, 0, INT_MAX);
@@ -481,7 +520,10 @@ static int gdsc_disable(struct regulator_dev *rdev)
 			 */
 			udelay(TIMEOUT_US);
 		} else {
-			ret = poll_gdsc_status(sc, DISABLED);
+			if (sc->poll_cfg_gdscr)
+				ret = poll_cfg_gdsc_status(sc, DISABLED);
+			else
+				ret = poll_gdsc_status(sc, DISABLED);
 			if (ret)
 				dev_err(&rdev->dev, "%s disable timed out: 0x%x\n",
 					sc->rdesc.name, regval);
@@ -697,6 +739,7 @@ static int gdsc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct gdsc *sc;
 	uint32_t regval, clk_dis_wait_val = 0;
+	uint32_t en_few_wait_val, en_rest_wait_val;
 	bool retain_mem, retain_periph, support_hw_trigger;
 	int i, ret;
 	u32 timeout;
@@ -755,6 +798,9 @@ static int gdsc_probe(struct platform_device *pdev)
 		if (IS_ERR(sc->hw_ctrl))
 			return -ENODEV;
 	}
+
+	sc->poll_cfg_gdscr = of_property_read_bool(pdev->dev.of_node,
+						"qcom,poll-cfg-gdscr");
 
 	sc->gds_timeout = TIMEOUT_US;
 
@@ -863,8 +909,6 @@ static int gdsc_probe(struct platform_device *pdev)
 		sc->mbox = mbox_request_channel(&sc->mbox_client, 0);
 		if (IS_ERR(sc->mbox)) {
 			ret = PTR_ERR(sc->mbox);
-			if (ret == -EAGAIN)
-				ret = -EPROBE_DEFER;
 			if (ret != -EPROBE_DEFER)
 				dev_err(&pdev->dev, "mailbox channel request failed, ret=%d\n",
 					ret);
@@ -893,6 +937,22 @@ static int gdsc_probe(struct platform_device *pdev)
 		/* Configure wait time between states. */
 		regval &= ~(CLK_DIS_WAIT_MASK);
 		regval |= clk_dis_wait_val;
+	}
+
+	if (!of_property_read_u32(pdev->dev.of_node, "qcom,en-few-wait-val",
+				  &en_few_wait_val)) {
+		en_few_wait_val <<= EN_FEW_WAIT_SHIFT;
+
+		regval &= ~(EN_FEW_WAIT_MASK);
+		regval |= en_few_wait_val;
+	}
+
+	if (!of_property_read_u32(pdev->dev.of_node, "qcom,en-rest-wait-val",
+				  &en_rest_wait_val)) {
+		en_rest_wait_val <<= EN_REST_WAIT_SHIFT;
+
+		regval &= ~(EN_REST_WAIT_MASK);
+		regval |= en_rest_wait_val;
 	}
 
 	regmap_write(sc->regmap, REG_OFFSET, regval);
@@ -969,7 +1029,10 @@ static int gdsc_probe(struct platform_device *pdev)
 		regval &= ~SW_COLLAPSE_MASK;
 		regmap_write(sc->regmap, REG_OFFSET, regval);
 
-		ret = poll_gdsc_status(sc, ENABLED);
+		if (sc->poll_cfg_gdscr)
+			ret = poll_cfg_gdsc_status(sc, ENABLED);
+		else
+			ret = poll_gdsc_status(sc, ENABLED);
 		if (ret) {
 			dev_err(&pdev->dev, "%s enable timed out: 0x%x\n",
 				sc->rdesc.name, regval);
@@ -1004,9 +1067,6 @@ static int gdsc_probe(struct platform_device *pdev)
 		else
 			clk_set_flags(sc->clocks[i], CLKFLAG_NORETAIN_PERIPH);
 	}
-
-	sc->skip_disable_before_enable = of_property_read_bool(
-		pdev->dev.of_node, "qcom,skip-disable-before-sw-enable");
 
 	reg_config.dev = &pdev->dev;
 	reg_config.init_data = init_data;
