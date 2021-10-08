@@ -4721,8 +4721,8 @@ int sde_encoder_prepare_for_kickoff(struct drm_encoder *drm_enc,
 		}
 	}
 
-	is_cmd_mode = sde_encoder_check_mode(drm_enc,
-			MSM_DISPLAY_CAP_CMD_MODE);
+	is_cmd_mode = sde_encoder_check_curr_mode(drm_enc,
+			MSM_DISPLAY_CMD_MODE);
 	if (_sde_encoder_is_dsc_enabled(drm_enc) && sde_enc->cur_master &&
 		((is_cmd_mode && sde_enc->cur_master->cont_splash_enabled) ||
 			!sde_enc->cur_master->cont_splash_enabled)) {
