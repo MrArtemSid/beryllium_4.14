@@ -137,6 +137,7 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 03 04 00];
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-prefill-lines = <25>;
 		};
 	};
 };
@@ -161,6 +162,7 @@
 			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 03 04 00];
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-prefill-lines = <25>;
 		};
 	};
 };
@@ -184,6 +186,7 @@
 			qcom,mdss-dsi-v-back-porch = <24>;
 			qcom,mdss-dsi-v-front-porch = <7>;
 			qcom,mdss-dsi-v-pulse-width = <4>;
+			qcom,mdss-dsi-panel-prefill-lines = <25>;
 		};
 	};
 };
