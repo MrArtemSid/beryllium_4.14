@@ -25,7 +25,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/regulator/consumer.h>
-#include <linux/hwinfo.h>
+/*#include <linux/hwinfo.h>*/
 
 #ifdef CONFIG_DRM
 #include <drm/drm_notifier.h>
