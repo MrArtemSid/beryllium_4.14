@@ -28,6 +28,7 @@
 
 #if defined(CONFIG_DRM_PANEL)
 #include <drm/drm_panel.h>
+#include <linux/msm_drm_notify.h>
 #elif defined(CONFIG_FB)
 #include <linux/notifier.h>
 #include <linux/fb.h>
@@ -60,9 +61,9 @@ extern void nvt_mp_proc_deinit(void);
 
 struct nvt_ts_data *ts;
 
-#if defined(CONFIG_DRM_PANEL)
+/*#if defined(CONFIG_DRM_PANEL)
 static struct drm_panel *active_panel;
-#endif
+#endif*/
 
 #if BOOT_UPDATE_FIRMWARE
 static struct workqueue_struct *nvt_fwu_wq;
@@ -1214,7 +1215,7 @@ static int nvt_ts_check_dt(struct device_node *np)
 		panel = of_drm_find_panel(node);
 		of_node_put(node);
 		if (!IS_ERR(panel)) {
-			active_panel = panel;
+			//active_panel = panel;
 			NVT_LOG(" %s:find\n", __func__);
 			return 0;
 		}
@@ -1550,10 +1551,9 @@ static int32_t nvt_ts_probe(struct i2c_client *client,
 #if defined(CONFIG_DRM)
 	ts->drm_notif.notifier_call = nvt_drm_notifier_callback;
 
-	if (active_panel &&
-		drm_panel_notifier_register(active_panel,
-			&ts->drm_notif) < 0) {
-		NVT_ERR("register notifier failed!\n");
+	ret = msm_drm_register_client(&ts->drm_notif);
+	if(ret) {
+		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
 		goto err_register_drm_notif_failed;
 	}
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -1571,8 +1571,8 @@ static int32_t nvt_ts_probe(struct i2c_client *client,
 	return 0;
 
 #if defined(CONFIG_DRM)
-	if (active_panel)
-		drm_panel_notifier_unregister(active_panel, &ts->drm_notif);
+	if (msm_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
 err_register_drm_notif_failed:
 
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -1595,8 +1595,8 @@ static int32_t nvt_ts_remove(struct i2c_client *client)
 	NVT_LOG("Removing driver...\n");
 
 #if defined(CONFIG_DRM_PANEL)
-	if (active_panel)
-		drm_panel_notifier_unregister(active_panel, &ts->drm_notif);
+	if (msm_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
 #elif defined(CONFIG_FB)
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
@@ -1666,8 +1666,8 @@ static void nvt_ts_shutdown(struct i2c_client *client)
 	nvt_irq_enable(false);
 
 #if defined(CONFIG_DRM_PANEL)
-	if (active_panel)
-		drm_panel_notifier_unregister(active_panel, &ts->drm_notif);
+	if (msm_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
 #elif defined(CONFIG_FB)
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
@@ -1845,7 +1845,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 static int nvt_drm_notifier_callback(struct notifier_block *self,
 	unsigned long event, void *data)
 {
-	struct drm_panel_notifier *evdata = data;
+	struct msm_drm_notifier *evdata = data;
 	int *blank;
 	struct nvt_ts_data *ts =
 		container_of(self, struct nvt_ts_data, drm_notif);
@@ -1855,13 +1855,13 @@ static int nvt_drm_notifier_callback(struct notifier_block *self,
 
 	blank = evdata->data;
 
-	if (event == DRM_PANEL_EARLY_EVENT_BLANK) {
-		if (*blank == DRM_PANEL_BLANK_POWERDOWN) {
+	if (event == MSM_DRM_EARLY_EVENT_BLANK) {
+		if (*blank == MSM_DRM_BLANK_POWERDOWN) {
 			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 			nvt_ts_suspend(&ts->client->dev);
 		}
-	} else if (event == DRM_PANEL_EVENT_BLANK) {
-		if (*blank == DRM_PANEL_BLANK_UNBLANK) {
+	} else if (event == MSM_DRM_EVENT_BLANK) {
+		if (*blank == MSM_DRM_BLANK_UNBLANK) {
 			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 			nvt_ts_resume(&ts->client->dev);
 		}
