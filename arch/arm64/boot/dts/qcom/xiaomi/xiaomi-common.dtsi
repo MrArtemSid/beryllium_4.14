@@ -200,7 +200,7 @@
 	/delete-property/ qcom,usbc-analog-en2-gpio;
 };
 
-&tavil_codec {
+&wcd934x_cdc {
 	qcom,cdc-micbias1-mv = <2700>;
 	qcom,cdc-micbias2-mv = <1800>;
 	qcom,cdc-micbias3-mv = <2700>;

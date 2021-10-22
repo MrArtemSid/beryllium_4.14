@@ -266,12 +266,7 @@ dtb-$(CONFIG_ARCH_SDXPRAIRIE) += sdxprairie-rumi.dtb \
 
 endif # CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS
 
-dtb-$(CONFIG_MACH_XIAOMI_E10) := xiaomi/beryllium/beryllium-p0-v2.dtb \
-	xiaomi/beryllium/beryllium-p0-v2.1.dtb \
-	xiaomi/beryllium/beryllium-p1-v2.1.dtb \
-	xiaomi/beryllium/beryllium-p2-v2.1.dtb \
-	xiaomi/beryllium/beryllium-p2-v2.1.dtb \
-	xiaomi/beryllium/beryllium-mp-v2.1.dtb
+dtb-$(CONFIG_MACH_XIAOMI_E10) := xiaomi/beryllium/beryllium-mp-v2.1.dtb
 
 ifeq ($(CONFIG_ARM64),y)
 always		:= $(dtb-y)

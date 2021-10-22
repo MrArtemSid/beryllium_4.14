@@ -11,7 +11,7 @@
  */
 
 &slim_aud {
-	tavil_codec: tavil_codec {
+	tavil_codec {
 		wcd: wcd_pinctrl@5 {
 			compatible = "qcom,wcd-pinctrl";
 			qcom,num-pins = <5>;
