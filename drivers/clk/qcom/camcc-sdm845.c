@@ -85,7 +85,7 @@ static struct pll_vco fabia_vco[] = {
 	{ 125000000, 1000000000, 1 },
 };
 
-static const struct pll_config cam_cc_pll0_config = {
+static const struct alpha_pll_config cam_cc_pll0_config = {
 	.l = 0x1f,
 	.frac = 0x4000,
 };
@@ -132,7 +132,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll0_out_even = {
 	},
 };
 
-static const struct pll_config cam_cc_pll1_config = {
+static const struct alpha_pll_config cam_cc_pll1_config = {
 	.l = 0x2a,
 	.frac = 0x1556,
 };
@@ -171,7 +171,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll1_out_even = {
 	},
 };
 
-static const struct pll_config cam_cc_pll2_config = {
+static const struct alpha_pll_config cam_cc_pll2_config = {
 	.l = 0x32,
 	.frac = 0x0,
 };
@@ -232,7 +232,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_odd = {
 	},
 };
 
-static const struct pll_config cam_cc_pll3_config = {
+static const struct alpha_pll_config cam_cc_pll3_config = {
 	.l = 0x14,
 	.frac = 0x0,
 };

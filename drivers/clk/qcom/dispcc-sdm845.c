@@ -122,12 +122,12 @@ static struct pll_vco fabia_vco[] = {
 	{ 125000000, 1000000000, 1 },
 };
 
-static const struct pll_config disp_cc_pll0_config = {
+static const struct alpha_pll_config disp_cc_pll0_config = {
 	.l = 0x15,
 	.frac = 0x7c00,
 };
 
-static const struct pll_config disp_cc_pll0_config_v2 = {
+static const struct alpha_pll_config disp_cc_pll0_config_v2 = {
 	.l = 0x2c,
 	.frac = 0xcaaa,
 };
